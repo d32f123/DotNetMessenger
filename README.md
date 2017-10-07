@@ -5,5 +5,9 @@ A messenger using .NET platform
 ### TODO
 - Register date for user
 - Last Seen date for user
-- Chat creation date
-- Chat avatar (for multi-user chat)
+- ChatInfo table which will include:
+  - Chat creation date
+  - Chat avatar (for multi-user chat)
+  - Chat title
+  - ...
+- ChatUsers should have a privelege level, which will tell what privileges a user has for which chat
