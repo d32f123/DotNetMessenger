@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.DataLayer
 {
@@ -13,8 +10,9 @@ namespace DotNetMessenger.DataLayer
         // WARN: The first member will be used as the creator
         Chat CreateGroupChat(IEnumerable<int> members, string title);
         Chat CreateDialog(int member1, int member2);
-        IEnumerable<Chat> GetUserChats(int userId);
+        Chat GetChat(int chatId);
         IEnumerable<User> GetChatUsers(int chatId);
+        IEnumerable<Chat> GetUserChats(int userId);
         void DeleteChat(int chatId);
 
         void SetCreator(int chatId, int newCreator);
@@ -25,5 +23,10 @@ namespace DotNetMessenger.DataLayer
         void SetChatInfo(int chatId, ChatInfo info);
         ChatInfo GetChatInfo(int chatId);
         void DeleteChatInfo(int chatId);
+
+        // Chat-specific user info
+        ChatUserInfo GetChatSpecificInfo(int userId, int chatId);
+        void SetChatSpecificInfo(int userId, int chatId, ChatUserInfo userInfo, bool updateRole = false);
+        ChatUserInfo SetChatSpecificRole(int userId, int chatId, UserRoles userRole);
     }
 }

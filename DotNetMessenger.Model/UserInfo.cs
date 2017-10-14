@@ -10,5 +10,10 @@ namespace DotNetMessenger.Model
         public string Email { get; set; }
         public DateTime DateOfBirth { get; set; }
         public byte[] Avatar { get; set; }
+
+        public UserInfo()
+        {
+            DateOfBirth = DateTime.Now;
+        }
     }
 }

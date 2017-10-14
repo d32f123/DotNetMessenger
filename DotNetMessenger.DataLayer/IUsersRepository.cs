@@ -1,5 +1,4 @@
 ﻿using DotNetMessenger.Model;
-using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.DataLayer
 {
@@ -16,10 +15,5 @@ namespace DotNetMessenger.DataLayer
 
         void SetUserInfo(int userId, UserInfo userInfo);
         void DeleteUserInfo(int userId);
-
-        // Chat-specific user info
-        ChatUserInfo GetChatSpecificInfo(int userId, int chatId);
-        void SetChatSpecificInfo(int userId, int chatId, ChatUserInfo userInfo, bool updateRole = false);
-        ChatUserInfo SetChatSpecificRole(int userId, int chatId, UserRoles userRole);
     }
 }

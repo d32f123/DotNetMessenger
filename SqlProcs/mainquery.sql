@@ -101,7 +101,7 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
 	[UserID]		INT,
 	[ChatID]		INT,
 	[Nickname]		VARCHAR(30),
-	[UserRole]		TINYINT
+	[UserRole]		TINYINT NOT NULL
 		CONSTRAINT	[DF_UserRole] DEFAULT 1,
 	CONSTRAINT		[PK_ChatUserInfos] PRIMARY KEY ([UserID], [ChatID]),
 	CONSTRAINT		[FK_ChatUserInfosChatUsers] FOREIGN KEY ([UserID], [ChatID]) 
@@ -161,19 +161,22 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
  );
  CREATE INDEX [IX_Attachments_MessageID] ON [Attachments]([MessageID]);
 
- INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, 0);
- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
-	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
-    VALUES (1, 0, 'hey');
+ SELECT * FROM [Users];
+ SELECT * FROM [Chats];
 
- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
-	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
-    VALUES (1, 0, 'hey world asd');
+-- INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, 0);
+-- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
+--	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
+--    VALUES (1, 0, 'hey');
 
-SELECT * FROM [Messages] WHERE CONTAINS([MessageText], '*hey*');
+-- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
+--	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
+--    VALUES (1, 0, 'hey world asd');
 
-SELECT * FROM [MessagesDeleteQueue];
+--SELECT * FROM [Messages] WHERE CONTAINS([MessageText], '*hey*');
 
-INSERT INTO [MessagesDeleteQueue] ([MessageID], [ExpireDate]) VALUES (1, GETDATE());
+--SELECT * FROM [MessagesDeleteQueue];
 
-EXEC [DeleteExpiredMessages];
+--INSERT INTO [MessagesDeleteQueue] ([MessageID], [ExpireDate]) VALUES (1, GETDATE());
+
+--EXEC [DeleteExpiredMessages];

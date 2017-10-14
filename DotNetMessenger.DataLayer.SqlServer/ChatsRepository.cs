@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Text;
+using System.Transactions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 
@@ -11,175 +14,220 @@ namespace DotNetMessenger.DataLayer.SqlServer
     public class ChatsRepository : IChatsRepository
     {
         private readonly string _connectionString;
-        private readonly IUsersRepository _usersRepository;
+        public IUsersRepository UsersRepository { get; set; }
 
         public ChatsRepository(string connectionString, IUsersRepository usersRepository)
         {
             _connectionString = connectionString;
-            _usersRepository = usersRepository;
+            UsersRepository = usersRepository;
+        }
+
+        public ChatsRepository(string connectionString)
+        {
+            _connectionString = connectionString;
         }
 
         public void AddUser(int chatId, int userId)
         {
-            using (var connection = new SqlConnection(_connectionString))
+            // check for default user
+            if (userId == 0)
+                return;
+            try
             {
-                connection.Open();
-                using (var command = connection.CreateCommand())
+                using (var connection = new SqlConnection(_connectionString))
                 {
-                    command.CommandText = "INSERT INTO [ChatUsers]([UserID], [ChatID]) VALUES " +
-                                          "(@userId, @chatId)";
-                    command.Parameters.AddWithValue("@userId", userId);
-                    command.Parameters.AddWithValue("@chatId", chatId);
+                    connection.Open();
 
-                    command.ExecuteNonQuery();
+                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
+                        (int) ChatTypes.Dialog))
+                        return;
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "INSERT INTO [ChatUsers]([UserID], [ChatID]) VALUES " +
+                                              "(@userId, @chatId)";
+                        command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@chatId", chatId);
+
+                        command.ExecuteNonQuery();
+                    }
                 }
             }
+            catch (SqlException) {}
         }
 
         public void AddUsers(int chatId, IEnumerable<int> newUsers)
         {
+            if (newUsers == null)
+                return;
+            var idList = newUsers as int[] ?? newUsers.ToArray();
+            if (idList.Contains(0))
+                return;
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
+                        (int)ChatTypes.Dialog))
+                        return;
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = "AddUsersToChat";
+
+                        var parameter =
+                            command.Parameters.AddWithValue("@IDList", SqlHelper.IdListToDataTable(idList));
+                        parameter.SqlDbType = SqlDbType.Structured;
+                        parameter.TypeName = "IdListType";
+                        command.Parameters.AddWithValue("@ChatID", chatId);
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (SqlException) { }
+        }
+
+        public Chat GetChat(int chatId)
+        {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandType = CommandType.StoredProcedure;
-                    command.CommandText = "AddUsersToChat";
+                    command.CommandText =
+                        "SELECT [ChatType], [CreatorID] FROM [Chats] WHERE [ID] = @chatId";
 
-                    var parameter = command.Parameters.AddWithValue("@IDList", DataTableHelper.IdListToDataTable(newUsers));
-                    parameter.SqlDbType = SqlDbType.Structured;
-                    parameter.TypeName = "IdListType";
-                    command.Parameters.AddWithValue("@ChatID", chatId);
-                    command.ExecuteNonQuery();
+                    command.Parameters.AddWithValue("@chatId", chatId);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            return null;
+                        reader.Read();
+                        return new Chat
+                        {
+                            Id = chatId,
+                            ChatType = (ChatTypes) reader.GetInt32(reader.GetOrdinal("ChatType")),
+                            CreatorId = reader.GetInt32(reader.GetOrdinal("CreatorID")),
+                            Info = GetChatInfo(chatId),
+                            Users = GetChatUsers(chatId)
+                        };
+                    }
                 }
+            }
+        }
+
+        private Chat CreateChat(IEnumerable<int> members, string title, ChatTypes chatType)
+        {
+            if (members == null)
+                return null;
+            var membersList = members as int[] ?? members.ToArray();
+            // check for default user
+            if (membersList.Contains(0))
+                return null;
+
+            try
+            {
+                using (var scope = new TransactionScope())
+                {
+                    using (var connection = new SqlConnection(_connectionString))
+                    {
+                        connection.Open();
+
+                        var chatInfo = new ChatInfo {Title = title};
+                        var userIds = members as int[] ?? membersList.ToArray();
+
+                        var chat = new Chat
+                        {
+                            ChatType = chatType,
+                            CreatorId = userIds[0],
+                            Info = chatInfo
+                        };
+
+                        // Create new chat
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText =
+                                "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
+
+                            command.Parameters.AddWithValue("@chatType", (int) (chat.ChatType));
+                            command.Parameters.AddWithValue("@creatorId", chat.CreatorId);
+
+                            chat.Id = (int) command.ExecuteScalar();
+                        }
+
+                        // Add users to chat
+                        foreach (var userId in userIds)
+                        {
+                            using (var command = connection.CreateCommand())
+                            {
+                                command.CommandText =
+                                    "INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
+
+                                command.Parameters.AddWithValue("@userId", userId);
+                                command.Parameters.AddWithValue("@chatId", chat.Id);
+
+                                command.ExecuteNonQuery();
+                            }
+                        }
+
+                        // Add chat title
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText =
+                                "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, NULL)";
+
+                            command.Parameters.AddWithValue("@chatId", chat.Id);
+                            command.Parameters.AddWithValue("@title", chatInfo.Title);
+
+                            command.ExecuteNonQuery();
+                        }
+
+                        scope.Complete();
+                        chat.Users = userIds.Select(x => UsersRepository.GetUser(x));
+                        return chat;
+                    }
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
         public Chat CreateGroupChat(IEnumerable<int> members, string title)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                using (var transaction = connection.BeginTransaction())
-                {
-                    var chatInfo = new ChatInfo { Title = title };
-                    var userIds = members as int[] ?? members.ToArray();
-
-                    var chat = new Chat{
-                        ChatType = ChatTypes.GroupChat,
-                        CreatorId = userIds[0],
-                        Info = chatInfo
-                    };
-
-                    // Create new chat
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.Transaction = transaction;
-                        command.CommandText = "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
-
-                        command.Parameters.AddWithValue("@chatType", (int)(chat.ChatType));
-                        command.Parameters.AddWithValue("@creatorId", chat.CreatorId);
-
-                        chat.Id = (int) command.ExecuteScalar();
-                    }
-
-                    // Add users to chat
-                    foreach (var userId in userIds)
-                    {
-                        using (var command = connection.CreateCommand())
-                        {
-                            command.Transaction = transaction;
-                            command.CommandText =
-                                "INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
-
-                            command.Parameters.AddWithValue("@userId", userId);
-                            command.Parameters.AddWithValue("@chatId", chat.Id);
-
-                            command.ExecuteNonQuery();
-                        }
-                    }
-
-                    // Add chat title
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.Transaction = transaction;
-                        command.CommandText = "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, NULL)";
-
-                        command.Parameters.AddWithValue("@chatId", chat.Id);
-                        command.Parameters.AddWithValue("@title", chatInfo.Title);
-
-                        command.ExecuteNonQuery();
-                    }
-
-                    transaction.Commit();
-                    chat.Users = userIds.Select(x => _usersRepository.GetUser(x));
-                    return chat;
-                }
-            }
+            return CreateChat(members, title, ChatTypes.GroupChat);
         }
 
         public Chat CreateDialog(int member1, int member2)
         {
-            using (var connection = new SqlConnection(_connectionString))
-            {
-                connection.Open();
-                using (var transaction = connection.BeginTransaction())
-                {
-                    var chat = new Chat { ChatType = ChatTypes.Dialog, CreatorId = member1 };
-
-                    // Create new chat
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.Transaction = transaction;
-
-                        command.CommandText =
-                            "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
-
-                        command.Parameters.AddWithValue("@chatType", (int) chat.ChatType);
-                        command.Parameters.AddWithValue("@creatorId", member1);
-
-                        chat.Id = (int) command.ExecuteScalar();
-                    }
-
-                    // Add users to chat
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.Transaction = transaction;
-
-                        command.CommandText =
-                            "INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (@firstId, @chatId), (@secondId, @chatId)";
-
-                        command.Parameters.AddWithValue("@firstId", member1);
-                        command.Parameters.AddWithValue("@secondId", member2);
-                        command.Parameters.AddWithValue("@chatId", chat.Id);
-
-                        command.ExecuteNonQuery();
-                    }
-
-                    transaction.Commit();
-                    var members = new[] {member1, member2};
-                    chat.Users = members.Select(x => _usersRepository.GetUser(x));
-                    return chat;
-                }
-            }
+            return CreateChat(new[] {member1, member2}, string.Empty, ChatTypes.Dialog);
         }
 
         public void DeleteChat(int chatId)
         {
+            
             using (var connection = new SqlConnection(_connectionString))
             {
+                    
                 connection.Open();
-                // Delete chat, ChatUsers entries should cascade
-                using (var command = connection.CreateCommand())
+                try
                 {
-                    command.CommandText = "DELETE FROM [Chats] WHERE [Chats].[ID] = @chatId";
+                    // Delete chat, ChatUsers entries should cascade
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "DELETE FROM [Chats] WHERE [Chats].[ID] = @chatId";
 
-                    command.Parameters.AddWithValue("@chatId", chatId);
+                        command.Parameters.AddWithValue("@chatId", chatId);
 
-                    command.ExecuteNonQuery();
+                        command.ExecuteNonQuery();
+                    }
                 }
+                catch (SqlException) { }
             }
+            
         }
 
         public void DeleteChatInfo(int chatId)
@@ -188,15 +236,20 @@ namespace DotNetMessenger.DataLayer.SqlServer
             {
                 connection.Open();
 
-                using (var command = connection.CreateCommand())
+                try
                 {
-                    command.CommandText = "DELETE FROM [ChatInfos] WHERE [ChatInfos].[ChatID] = @chatId";
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "DELETE FROM [ChatInfos] WHERE [ChatInfos].[ChatID] = @chatId";
 
-                    command.Parameters.AddWithValue("@chatId", chatId);
+                        command.Parameters.AddWithValue("@chatId", chatId);
 
-                    command.ExecuteNonQuery();
+                        command.ExecuteNonQuery();
+                    }
                 }
+                catch (SqlException) { }
             }
+            
         }
 
         public IEnumerable<Chat> GetUserChats(int userId)
@@ -209,20 +262,22 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText =
-                        "SELECT [Chats].[ID], [Chats].[ChatType], [Chats].[CreatorID] " +
+                        "SELECT [Chats].[ID] ID, [Chats].[ChatType] ChatType, [Chats].[CreatorID] CreatorID " +
                         "FROM [ChatUsers], [Chats] WHERE [Chats].[ID] = [ChatUsers].[ChatID] AND [ChatUsers].[UserID] = @userId";
 
                     command.Parameters.AddWithValue("@userId", userId);
                     using (var reader = command.ExecuteReader())
                     {
+                        if (!reader.HasRows)
+                            yield break;
                         while (reader.Read())
                         {
-                            var chatId = reader.GetInt32(reader.GetOrdinal("[Chats].[ID]"));
+                            var chatId = reader.GetInt32(reader.GetOrdinal("ID"));
                             yield return new Chat
                             {
-                                Id = reader.GetInt32(reader.GetOrdinal("[Chats].[ID]")),
-                                ChatType = (ChatTypes)reader.GetInt32(reader.GetOrdinal("[Chats].[ChatType]")),
-                                CreatorId = reader.GetInt32(reader.GetOrdinal("[Chats].[CreatorID]")),
+                                Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                ChatType = (ChatTypes)reader.GetInt32(reader.GetOrdinal("ChatType")),
+                                CreatorId = reader.GetInt32(reader.GetOrdinal("CreatorID")),
                                 Info = GetChatInfo(chatId),
                                 Users = GetChatUsers(chatId)
                             };
@@ -245,9 +300,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.Parameters.AddWithValue("@chatId", chatId);
                     using (var reader = command.ExecuteReader())
                     {
+                        if (!reader.HasRows)
+                            yield break;
                         while (reader.Read())
                         {
-                            yield return _usersRepository.GetUser(reader.GetInt32(reader.GetOrdinal("[UserID]")));
+                            yield return UsersRepository.GetUser(reader.GetInt32(reader.GetOrdinal("UserID")));
                         }
                     }
                 }
@@ -256,6 +313,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
         public void KickUser(int chatId, int userId)
         {
+            if (userId == 0)
+                return;
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -275,6 +334,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
         public void KickUsers(int chatId, IEnumerable<int> kickedUsers)
         {
+            if (kickedUsers == null)
+                return;
+            var idList = kickedUsers as int[] ?? kickedUsers.ToArray();
+            if (idList.Contains(0))
+                return;
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -284,7 +348,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.CommandType = CommandType.StoredProcedure;
                     command.CommandText = "KickUsersFromChat";
 
-                    var parameter = command.Parameters.AddWithValue("@IDList", DataTableHelper.IdListToDataTable(kickedUsers));
+                    var parameter = command.Parameters.AddWithValue("@IDList", SqlHelper.IdListToDataTable(idList));
                     parameter.SqlDbType = SqlDbType.Structured;
                     parameter.TypeName = "IdListType";
                     command.Parameters.AddWithValue("@ChatID", chatId);
@@ -295,22 +359,33 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
         public void SetChatInfo(int chatId, ChatInfo info)
         {
+            if (info == null)
+                return;
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
 
+                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                    return;
+                var infoExists = SqlHelper.DoesFieldValueExist(connection, "ChatInfos", "ChatID", chatId, SqlDbType.Int);
+
                 using (var command = connection.CreateCommand())
                 {
-                    /* TODO: CHECK IF NO USERINFO EXISTS, INSERT IF YES */
-                    command.CommandText =
-                        "UPDATE [ChatInfos] SET [Title] = @title, [Avatar] = @avatar WHERE [ChatID] = @chatId";
+                    command.CommandText = infoExists
+                        ? "UPDATE [ChatInfos] SET [Title] = @title, [Avatar] = @avatar WHERE [ChatID] = @chatId"
+                        : "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, @avatar)";
 
                     command.Parameters.AddWithValue("@chatId", chatId);
-                    command.Parameters.AddWithValue("@title", info.Title);
+                    if (info.Title == null)
+                        command.Parameters.AddWithValue("@title", DBNull.Value);
+                    else
+                        command.Parameters.AddWithValue("@title", info.Title);
 
                     var avatar =
-                        new SqlParameter("@avatar", SqlDbType.VarBinary, info.Avatar.Length)
-                        { Value = info.Avatar };
+                        info.Avatar != null
+                            ? new SqlParameter("@avatar", SqlDbType.VarBinary, info.Avatar.Length)
+                                {Value = info.Avatar}
+                            : new SqlParameter("@avatar", SqlDbType.VarBinary) {Value = DBNull.Value};
                     command.Parameters.Add(avatar);
 
                     command.ExecuteNonQuery();
@@ -332,9 +407,15 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     using (var reader = command.ExecuteReader())
                     {
+                        if (!reader.HasRows)
+                            return null;
                         reader.Read();
-                        var avatar = reader[reader.GetOrdinal("[Avatar]")] as byte[];
-                        return new ChatInfo {Avatar = avatar, Title = reader.GetString(reader.GetOrdinal("[Title]")) };
+                        var avatar = reader.IsDBNull(reader.GetOrdinal("Avatar")) ? null : reader[reader.GetOrdinal("Avatar")] as byte[];
+                        return new ChatInfo
+                        {
+                            Avatar = avatar,
+                            Title = reader.IsDBNull(reader.GetOrdinal("Title")) ? null : reader.GetString(reader.GetOrdinal("Title"))
+                        };
                     }
                 }
             }
@@ -342,18 +423,153 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
         public void SetCreator(int chatId, int newCreator)
         {
+            if (newCreator == 0)
+                return;
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                {
+                    connection.Open();
+
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "UPDATE [Chats] SET [CreatorID] = @newCreator WHERE [ID] = @chatId";
+
+                        command.Parameters.AddWithValue("@chatId", chatId);
+                        command.Parameters.AddWithValue("@newCreator", newCreator);
+
+                        command.ExecuteNonQuery();
+                    }
+                }
+            }
+            catch (SqlException) { }
+        }
+
+        public ChatUserInfo GetChatSpecificInfo(int userId, int chatId)
+        {
+            if (userId == 0)
+                return null;
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
 
+                var chatUserInfo = new ChatUserInfo();
+                int roleId;
+
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "UPDATE [Chats] SET [CreatorID] = @newCreator WHERE [ID] = @chatId";
+                    command.CommandText =
+                        "SELECT [Nickname], [UserRole] FROM [ChatUserInfos] WHERE [UserID] = @userId AND [ChatID] = @chatId";
 
+                    command.Parameters.AddWithValue("@userId", userId);
                     command.Parameters.AddWithValue("@chatId", chatId);
-                    command.Parameters.AddWithValue("@newCreator", newCreator);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            return null;
+                        reader.Read();
+                        chatUserInfo.Nickname = reader.IsDBNull(reader.GetOrdinal("Nickname")) ? null : reader.GetString(reader.GetOrdinal("Nickname"));
+                        roleId = reader.GetInt32(reader.GetOrdinal("UserRole"));
+                    }
+                }
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText =
+                        "SELECT [Name], [ReadPerm], [WritePerm], [ChatInfoPerm], [AttachPerm], [ManageUsersPerm]" +
+                        " FROM [UserRoles] WHERE [ID] = @roleId";
+                    command.Parameters.AddWithValue("@roleId", roleId);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        reader.Read();
+                        chatUserInfo.Role = new UserRole
+                        {
+                            RoleType = (UserRoles)roleId,
+                            ReadPerm = reader.GetBoolean(reader.GetOrdinal("ReadPerm")),
+                            WritePerm = reader.GetBoolean(reader.GetOrdinal("WritePerm")),
+                            ChatInfoPerm = reader.GetBoolean(reader.GetOrdinal("ChatInfoPerm")),
+                            AttachPerm = reader.GetBoolean(reader.GetOrdinal("AttachPerm")),
+                            ManageUsersPerm = reader.GetBoolean(reader.GetOrdinal("ManageUsersPerm")),
+                            RoleName = reader.GetString(reader.GetOrdinal("Name"))
+                        };
+                    }
+                }
+
+                return chatUserInfo;
+            }
+        }
+
+        public void SetChatSpecificInfo(int userId, int chatId, ChatUserInfo userInfo, bool updateRole = false)
+        {
+            if (userInfo == null)
+                return;
+            if (userId == 0)
+                return;
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId, "[ChatID]", chatId);
+                using (var command = connection.CreateCommand())
+                {
+                    var sb = new StringBuilder();
+                    if (infoExists)
+                    {
+                        sb.Append("UPDATE [ChatUserInfos] SET [Nickname] = @nickName");
+                        if (updateRole)
+                            sb.Append(", [UserRole] = @userRole");
+                        sb.Append(" WHERE [UserID] = @userId AND [ChatID] = @chatId");
+                    }
+                    else
+                    {
+                        sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [Nickname]");
+                        sb.Append(updateRole ? ", [UserRole]) " : ") ");
+                        sb.Append("VALUES (@userId, @chatId, @nickName");
+                        sb.Append(updateRole ? ", @userRole)" : ")");
+                    }
+                    command.CommandText = sb.ToString();
+
+                    command.Parameters.AddWithValue("@nickName", userInfo.Nickname);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    command.Parameters.AddWithValue("@userId", userId);
+                    if (updateRole)
+                    {
+                        command.Parameters.AddWithValue("@userRole", (int)(userInfo.Role?.RoleType ?? UserRoles.Regular));
+                    }
 
                     command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public ChatUserInfo SetChatSpecificRole(int userId, int chatId, UserRoles userRole)
+        {
+            if (userId == 0)
+                return null;
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId, "[ChatID]", chatId);
+                using (var command = connection.CreateCommand())
+                {
+                    var sb = new StringBuilder();
+                    if (infoExists)
+                        sb.Append("UPDATE [ChatUserInfos] SET [UserRole] = @userRole ")
+                            .Append("WHERE [UserID] = @userId AND [ChatID] = @chatId");
+                    else
+                        sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [UserRole]) ")
+                            .Append("VALUES (@userId, @chatId, @userRole)");
+                    command.CommandText = sb.ToString();
+
+                    command.Parameters.AddWithValue("@userRole", (int)userRole);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    command.ExecuteNonQuery();
+                    return GetChatSpecificInfo(userId, chatId);
                 }
             }
         }
