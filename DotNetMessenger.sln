@@ -7,15 +7,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		SqlProcs\AddUsersToChat.sql = SqlProcs\AddUsersToChat.sql
 		database.PNG = database.PNG
+		SqlProcs\IDListType.sql = SqlProcs\IDListType.sql
+		SqlProcs\KickUsersFromChat.sql = SqlProcs\KickUsersFromChat.sql
 		LICENSE = LICENSE
-		mainquery.sql = mainquery.sql
+		SqlProcs\mainquery.sql = SqlProcs\mainquery.sql
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.Model", "DotNetMessenger.Model\DotNetMessenger.Model.csproj", "{79AEFA90-761C-4EAB-94F0-3E3DEE808B7F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.DataLayer", "DotNetMessenger.DataLayer\DotNetMessenger.DataLayer.csproj", "{7571A909-12DA-4C29-8BA0-A7A21732046E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.DataLayer.SqlServer", "DotNetMessenger.DataLayer.SqlServer\DotNetMessenger.DataLayer.SqlServer.csproj", "{C997DF8D-5F30-4A6D-A823-9BB046EFCAC0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.Model.Enums", "DotNetMessenger.Model.Enums\DotNetMessenger.Model.Enums.csproj", "{2B5D0DF9-5E22-4894-89DF-71CD50AA4010}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +38,14 @@ Global
 		{7571A909-12DA-4C29-8BA0-A7A21732046E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7571A909-12DA-4C29-8BA0-A7A21732046E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7571A909-12DA-4C29-8BA0-A7A21732046E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C997DF8D-5F30-4A6D-A823-9BB046EFCAC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C997DF8D-5F30-4A6D-A823-9BB046EFCAC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C997DF8D-5F30-4A6D-A823-9BB046EFCAC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C997DF8D-5F30-4A6D-A823-9BB046EFCAC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B5D0DF9-5E22-4894-89DF-71CD50AA4010}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B5D0DF9-5E22-4894-89DF-71CD50AA4010}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B5D0DF9-5E22-4894-89DF-71CD50AA4010}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B5D0DF9-5E22-4894-89DF-71CD50AA4010}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

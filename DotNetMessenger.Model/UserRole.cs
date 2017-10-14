@@ -1,4 +1,6 @@
-﻿namespace DotNetMessenger.Model
+﻿using DotNetMessenger.Model.Enums;
+
+namespace DotNetMessenger.Model
 {
     /// <summary>
     /// Information regarding
@@ -7,6 +9,8 @@
     /// </summary>
     public class UserRole
     {
+        public UserRoles RoleType { get; set; }
+        public string RoleName { get; set; }
         public bool ReadPerm { get; set; }
         public bool WritePerm { get; set; }
         // Whether a user can edit topic, avatar of the chat et c. or not

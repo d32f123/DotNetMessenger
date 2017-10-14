@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
+using DotNetMessenger.Model.Enums;
+
 namespace DotNetMessenger.Model
 {
     public class Chat
@@ -10,8 +12,8 @@ namespace DotNetMessenger.Model
         private IEnumerable<User> _users;
 
         public int Id { get; set; }
-        public int ChatType { get; set; }
-        public User Creator { get; set; }
+        public ChatTypes ChatType { get; set; }
+        public int CreatorId { get; set; }
         public ChatInfo Info { get; set; }
         public IEnumerable<User> Users
         {
@@ -19,27 +21,35 @@ namespace DotNetMessenger.Model
             set { _users = value; }
         }
 
-        public Chat(int id, int chatType, User creator, ChatInfo info)
+        public Chat(int id, ChatTypes chatType, int creatorId, ChatInfo info)
         {
             Id = id;
             ChatType = chatType;
-            Creator = creator;
+            CreatorId = creatorId;
             Info = info;
         }
 
-        public Chat(int id, int chatType, User creator)
+        public Chat(int id, ChatTypes chatType, int creatorId)
         {
             Id = id;
             ChatType = chatType;
-            Creator = creator;
+            CreatorId = creatorId;
             Info = null;
         }
 
         public Chat(int id)
         {
             Id = id;
-            ChatType = 0;
-            Creator = null;
+            ChatType = ChatTypes.Dialog;
+            CreatorId = 0;
+            Info = null;
+        }
+
+        public Chat()
+        {
+            Id = 0;
+            ChatType = ChatTypes.Dialog;
+            CreatorId = 0;
             Info = null;
         }
     }

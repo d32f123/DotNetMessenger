@@ -1,0 +1,3 @@
+CREATE TYPE IDListType AS TABLE (
+	ID	INT
+	);
