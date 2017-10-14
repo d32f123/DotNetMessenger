@@ -136,7 +136,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.CommandText =
                             "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
 
-                        command.Parameters.AddWithValue("@chatType", (int)(chat.ChatType));
+                        command.Parameters.AddWithValue("@chatType", (int) chat.ChatType);
                         command.Parameters.AddWithValue("@creatorId", member1);
 
                         chat.Id = (int) command.ExecuteScalar();

@@ -6,8 +6,14 @@ namespace DotNetMessenger.DataLayer
 {
     public interface IMessagesRepository
     {
-        Message StoreMessage(Message message);
+        Message StoreMessage(int senderId, int chatId, string text, IEnumerable<Attachment> attachments = null);
+        Message StoreTemporaryMessage(int senderId, int chatId, string text, DateTime expirationDate,
+            IEnumerable<Attachment> attachments = null);
+
         Message GetMessage(int messageId);
+        IEnumerable<Attachment> GetMessageAttachments(int messageId);
+
+        DateTime GetMessageExpirationDate(int messageId);
 
         IEnumerable<Message> GetChatMessages(int chatId);
         IEnumerable<Message> GetChatMessagesFrom(int chatId, DateTime dateFrom);
@@ -17,6 +23,6 @@ namespace DotNetMessenger.DataLayer
         IEnumerable<Message> SearchString(int chatId, string searchString);
 
         // Execute sql-template for clearing messages that should be deleted
-        void ExecuteQueueCleanUp();
+        void DeleteExpiredMessages();
     }
 }

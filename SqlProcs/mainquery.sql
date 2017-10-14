@@ -14,7 +14,7 @@
 	DROP FULLTEXT CATALOG [CG_Messages];
 
  CREATE TABLE [Users](
-	[ID]			INT IDENTITY(0,1),
+	[ID]			INT IDENTITY(0, 1),
 	[Username]		VARCHAR(50) UNIQUE NOT NULL,
 	[Password]		VARCHAR(50) NOT NULL,
 	[LastSeenDate]  DATETIME
@@ -49,7 +49,7 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
  INSERT INTO [ChatTypes] VALUES ('GroupChat');
 
  CREATE TABLE [Chats](
-	[ID]			INT IDENTITY,
+	[ID]			INT IDENTITY(0, 1),
 	[ChatType]		INT NOT NULL,
 	[CreatorID]		INT NOT NULL -- index candidate
 		CONSTRAINT	[DF_CreatorID] DEFAULT 0,
@@ -111,12 +111,13 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
  );
 
  CREATE TABLE [Messages](
-	[ID]			INT IDENTITY,
+	[ID]			INT IDENTITY(0, 1),
 	[ChatID]		INT NOT NULL, -- index candidate
 	[SenderID]		INT NOT NULL  -- index candidate
 		CONSTRAINT [DF_SenderID] DEFAULT 0,
 	[MessageText]	VARCHAR(MAX),
-	[MessageDate]	DATETIME NOT NULL,-- index candidate
+	[MessageDate]	DATETIME NOT NULL-- index candidate
+		CONSTRAINT	[DF_MessageDate] DEFAULT GETDATE(),
 	CONSTRAINT	[PK_Messages] PRIMARY KEY	([ID]),
 	CONSTRAINT	[FK_MessagesChat] FOREIGN KEY ([ChatID]) REFERENCES [Chats]([ID]) ON DELETE CASCADE,
 	CONSTRAINT	[FK_MessagesUser] FOREIGN KEY ([SenderID]) REFERENCES [Users]([ID]) ON DELETE SET DEFAULT,
@@ -141,7 +142,7 @@ CREATE INDEX [IX_MessagesDeleteQueue_ExpireDate] ON [MessagesDeleteQueue]([Expir
 
 
 CREATE TABLE [AttachmentTypes](
-	[ID]			TINYINT IDENTITY,
+	[ID]			TINYINT IDENTITY(0, 1),
 	[FileFormat]	VARCHAR(30),
 	CONSTRAINT		[PK_AttachmentTypes] PRIMARY KEY ([ID])
 );
@@ -149,7 +150,7 @@ CREATE TABLE [AttachmentTypes](
 INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
 
  CREATE TABLE [Attachments](
-	[ID]			INT IDENTITY,
+	[ID]			INT IDENTITY(0, 1),
 	[Type]			TINYINT NOT NULL		-- 0 - image, 1 -- regular file
 		CONSTRAINT DF_Type DEFAULT 0,
 	[AttachFile]	VARBINARY(MAX) NOT NULL,
@@ -159,3 +160,20 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
 	CONSTRAINT		[FK_AttachmentsAttachmentTypes] FOREIGN KEY ([Type]) REFERENCES [AttachmentTypes]([ID]) ON DELETE SET DEFAULT
  );
  CREATE INDEX [IX_Attachments_MessageID] ON [Attachments]([MessageID]);
+
+ INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, 0);
+ INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
+	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
+    VALUES (1, 0, 'hey');
+
+ INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
+	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
+    VALUES (1, 0, 'hey world asd');
+
+SELECT * FROM [Messages] WHERE CONTAINS([MessageText], '*hey*');
+
+SELECT * FROM [MessagesDeleteQueue];
+
+INSERT INTO [MessagesDeleteQueue] ([MessageID], [ExpireDate]) VALUES (1, GETDATE());
+
+EXEC [DeleteExpiredMessages];
