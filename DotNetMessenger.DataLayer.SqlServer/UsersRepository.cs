@@ -2,7 +2,6 @@
 using System.Data;
 using System.Data.SqlClient;
 using DotNetMessenger.Model;
-using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.DataLayer.SqlServer
 {
@@ -36,7 +35,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     return null;
                 using (var transaction = connection.BeginTransaction())
                 {
-                    User user;
+                    UserSqlProxy user;
                     using (var command = connection.CreateCommand())
                     {
                         command.Transaction = transaction;
@@ -47,7 +46,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.Parameters.AddWithValue("@hash", hash);
 
                         var id = (int) command.ExecuteScalar();
-                        user = new User {Chats = null, Hash = hash, Id = id, UserInfo = null, Username = userName};
+                        user = new UserSqlProxy {Chats = null, Hash = hash, Id = id, UserInfo = null, Username = userName};
                     }
 
                     using (var command = connection.CreateCommand())
@@ -104,7 +103,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.CommandText = "SELECT [ID], [Username], [Password] FROM [Users] WHERE [ID] = @userId";
                     command.Parameters.AddWithValue("@userId", userId);
 
-                    var user = new User();
+                    var user = new UserSqlProxy();
                     using (var reader = command.ExecuteReader())
                     {
                         reader.Read();
@@ -112,8 +111,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         user.Hash = reader.GetString(reader.GetOrdinal("Password"));
                         user.Username = reader.GetString(reader.GetOrdinal("Username"));
                     }
-                    user.Chats = ChatsRepository.GetUserChats(user.Id);
-                    user.UserInfo = GetUserInfo(user.Id);
                     return user;
                 }
             }

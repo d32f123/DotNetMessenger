@@ -33,7 +33,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         connection.Open();
 
                         // Insert the message
-                        var message = new Message {ChatId = chatId, SenderId = senderId, Text = text};
+                        var message = new MessageSqlProxy {ChatId = chatId, SenderId = senderId, Text = text};
                         using (var command = connection.CreateCommand())
                         {
                             command.CommandText = "DECLARE @T TABLE (ID INT, MessageDate DATETIME)\n" +
@@ -65,8 +65,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         }
                         else
                         {
-                            var messageAttachments = attachments as Attachment[] ?? attachments.ToArray();
-                            foreach (var attachment in messageAttachments)
+                            foreach (var attachment in attachments)
                                 using (var command = connection.CreateCommand())
                                 {
                                     command.CommandText =
@@ -83,7 +82,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                                     attachment.Id = (int) command.ExecuteScalar();
                                 }
-                            message.Attachments = messageAttachments;
                         }
                         scope.Complete();
                         return message;
@@ -107,7 +105,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Open();
-                    var message = StoreMessage(senderId, chatId, text, attachments);
+                    var message = (MessageSqlProxy)StoreMessage(senderId, chatId, text, attachments);
 
                     if (message == null)
                         return null;
@@ -146,15 +144,13 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         if (!reader.HasRows)
                             return null;
                         reader.Read();
-                        return new Message
+                        return new MessageSqlProxy
                         {
                             Id = messageId,
                             ChatId = reader.GetInt32(reader.GetOrdinal("ChatID")),
                             SenderId = reader.GetInt32(reader.GetOrdinal("SenderID")),
                             Text = reader.IsDBNull(reader.GetOrdinal("MessageText")) ? null : reader.GetString(reader.GetOrdinal("MessageText")),
                             Date = reader.GetDateTime(reader.GetOrdinal("MessageDate")),
-                            Attachments = GetMessageAttachments(messageId),
-                            ExpirationDate = GetMessageExpirationDate(messageId)
                         };
                     }
                 }
@@ -234,15 +230,13 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     {
                         while (reader.Read())
                         {
-                            yield return new Message
+                            yield return new MessageSqlProxy
                             {
                                 Id = reader.GetInt32(reader.GetOrdinal("ID")),
                                 ChatId = chatId,
                                 Text = reader.IsDBNull(reader.GetOrdinal("MessageText")) ? null : reader.GetString(reader.GetOrdinal("MessageText")),
                                 SenderId = reader.GetInt32(reader.GetOrdinal("SenderID")),
                                 Date = reader.GetDateTime(reader.GetOrdinal("MessageDate")),
-                                Attachments = GetMessageAttachments(reader.GetInt32(reader.GetOrdinal("ID"))),
-                                ExpirationDate = GetMessageExpirationDate(reader.GetInt32(reader.GetOrdinal("ID")))
                             };
                         }
                     }
@@ -270,7 +264,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     {
                         while (reader.Read())
                         {
-                            yield return new Message
+                            yield return new MessageSqlProxy
                             {
                                 Id = reader.GetInt32(reader.GetOrdinal("ID")),
                                 ChatId = chatId,

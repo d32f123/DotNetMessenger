@@ -6,27 +6,15 @@ namespace DotNetMessenger.Model
     {
         public static readonly int InvalidId = -1;
 
-        private bool _areChatsFetched;
-        private IEnumerable<Chat> _chats;
-
         public int Id { get; set; }
         public string Username { get; set; }
         public string Hash { get; set; }
 
-        private bool _isUserInfoFetched;
-        private UserInfo _userInfo;
+        public virtual UserInfo UserInfo { get; set; }
 
-        public IEnumerable<Chat> Chats
-        {
-            get { return _chats; }
-            set { _chats = value; }
-        }
+        public virtual IEnumerable<Chat> Chats { get; set; }
 
-        public UserInfo UserInfo
-        {
-            get { return _userInfo; }
-            set { _userInfo = value; }
-        }
+        public virtual IEnumerable<ChatUserInfo> ChatUserInfos { get; set; }
 
         public User()
         {

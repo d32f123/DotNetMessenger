@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using DotNetMessenger.Model;
@@ -23,9 +22,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         [TestInitialize]
         public void InitRepos()
         {
-            _usersRepository = new UsersRepository(ConnectionString);
-            _chatsRepository = new ChatsRepository(ConnectionString, _usersRepository);
-            ((UsersRepository)_usersRepository).ChatsRepository = _chatsRepository;
+            RepositoryBuilder.ConnectionString = ConnectionString;
+            _usersRepository = RepositoryBuilder.UsersRepository;
+            _chatsRepository = RepositoryBuilder.ChatsRepository;
         }
 
         [TestMethod]
@@ -34,9 +33,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // arrange
             var users = new List<User> 
             {
-                new User { Username = "testuser13", Hash = "asd" },
-                new User { Username = "testuser14", Hash = "asd" },
-                new User {Username = "testuser15", Hash = "asd"}
+                new UserSqlProxy { Username = "testuser13", Hash = "asd" },
+                new UserSqlProxy { Username = "testuser14", Hash = "asd" },
+                new UserSqlProxy {Username = "testuser15", Hash = "asd"}
             };
             // act
             users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
@@ -63,8 +62,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // arrange
             var users = new List<User>
             {
-                new User { Username = "testuser16", Hash = "asd" },
-                new User { Username = "testuser17", Hash = "asd" },
+                new UserSqlProxy { Username = "testuser16", Hash = "asd" },
+                new UserSqlProxy { Username = "testuser17", Hash = "asd" },
             };
             // act
             users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
@@ -83,12 +82,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // arrange
             var users = new List<User>
             {
-                new User { Username = "testuser18", Hash = "asd" },
-                new User { Username = "testuser19", Hash = "asd" },
+                new UserSqlProxy { Username = "testuser18", Hash = "asd" },
+                new UserSqlProxy { Username = "testuser19", Hash = "asd" },
             };
             // act
             users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
-            users.Insert(0, new User { Id = 0, Username = "testuser18", Hash = "asd" });
+            users.Insert(0, new UserSqlProxy { Id = 0, Username = "testuser18", Hash = "asd" });
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -790,13 +789,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // act
             users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
+            var chatCount = chat.Users.Count();
 
             users.ForEach(x => _tempUsers.Add(x.Id));
 
             _chatsRepository.KickUser(chat.Id, users[1].Id);
             var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count() - 1, newChat.Users.Count());
+            Assert.AreEqual(chatCount - 1, newChat.Users.Count());
         }
 
         [TestMethod]
@@ -935,13 +935,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // act
             users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
+            var chatCount = chat.Users.Count();
 
             users.ForEach(x => _tempUsers.Add(x.Id));
 
             _chatsRepository.KickUsers(chat.Id, new[] {users[1].Id});
             var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count() - 1, newChat.Users.Count());
+            Assert.AreEqual(chatCount - 1, newChat.Users.Count());
         }
 
         [TestMethod]

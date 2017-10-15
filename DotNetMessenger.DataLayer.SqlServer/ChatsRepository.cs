@@ -115,13 +115,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         if (!reader.HasRows)
                             return null;
                         reader.Read();
-                        return new Chat
+                        return new ChatSqlProxy
                         {
                             Id = chatId,
                             ChatType = (ChatTypes) reader.GetInt32(reader.GetOrdinal("ChatType")),
                             CreatorId = reader.GetInt32(reader.GetOrdinal("CreatorID")),
-                            Info = GetChatInfo(chatId),
-                            Users = GetChatUsers(chatId)
                         };
                     }
                 }
@@ -148,7 +146,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         var chatInfo = new ChatInfo {Title = title};
                         var userIds = members as int[] ?? membersList.ToArray();
 
-                        var chat = new Chat
+                        var chat = new ChatSqlProxy
                         {
                             ChatType = chatType,
                             CreatorId = userIds[0],
@@ -205,7 +203,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         }
 
                         scope.Complete();
-                        chat.Users = userIds.Select(x => UsersRepository.GetUser(x));
                         return chat;
                     }
                 }
@@ -286,14 +283,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             yield break;
                         while (reader.Read())
                         {
-                            var chatId = reader.GetInt32(reader.GetOrdinal("ID"));
-                            yield return new Chat
+                            yield return new ChatSqlProxy
                             {
                                 Id = reader.GetInt32(reader.GetOrdinal("ID")),
                                 ChatType = (ChatTypes)reader.GetInt32(reader.GetOrdinal("ChatType")),
                                 CreatorId = reader.GetInt32(reader.GetOrdinal("CreatorID")),
-                                Info = GetChatInfo(chatId),
-                                Users = GetChatUsers(chatId)
                             };
                         }
                     }

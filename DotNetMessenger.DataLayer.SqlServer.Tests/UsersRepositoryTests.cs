@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.DataLayer.SqlServer.Tests
 {
@@ -14,16 +15,17 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 Initial Catalog=messenger;
                 Integrated Security=True;";
         private readonly List<int> _tempUsers = new List<int>();
+        private readonly List<int> _tempChats = new List<int>();
 
-        private IChatsRepository _chatsRepository;
         private IUsersRepository _usersRepository;
+        private IChatsRepository _chatsRepository;
 
         [TestInitialize]
         public void InitRepos()
         {
-            _chatsRepository = new ChatsRepository(ConnectionString);
-            _usersRepository = new UsersRepository(ConnectionString, _chatsRepository);
-            ((ChatsRepository) _chatsRepository).UsersRepository = _usersRepository;
+            RepositoryBuilder.ConnectionString = ConnectionString;
+            _usersRepository = RepositoryBuilder.UsersRepository;
+            _chatsRepository = RepositoryBuilder.ChatsRepository;
         }
 
         [TestMethod]
@@ -343,9 +345,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             //assert
             Assert.AreEqual(chatName, chat.Info.Title);
             Assert.AreEqual(result.Id, chat.Users.Single().Id);
-            Assert.AreEqual(chat.Id, userChats.Single().Id);
-            Assert.AreEqual(chat.Info.Title, userChats.Single().Info.Title);
-            Assert.AreEqual(chat.CreatorId, userChats.Single().CreatorId);
+
+            var enumerable = userChats as Chat[] ?? userChats.ToArray();
+            Assert.AreEqual(chat.Id, enumerable.Single().Id);
+            Assert.AreEqual(chat.Info.Title, enumerable.Single().Info.Title);
+            Assert.AreEqual(chat.CreatorId, enumerable.Single().CreatorId);
             Assert.AreEqual(chat.CreatorId, result.Id);
         }
 
@@ -466,11 +470,66 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.IsNull(persistedUser);
         }
 
+        [TestMethod]
+        public void Should_ReturnUserChats()
+        {
+            // arrange
+            var user = new User {Username = "hey world", Hash = "asd"};
+            // act
+            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var chats = new List<Chat> {
+                _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat"),
+                _chatsRepository.CreateGroupChat(new[] { user.Id }, "ok") 
+            };
+
+            _tempUsers.Add(user.Id);
+            chats.ForEach(x => _tempChats.Add(x.Id));
+
+            // assert
+            Assert.AreEqual(2, user.Chats.Count());
+
+            var i = 0;
+            foreach (var chat in user.Chats)
+            {
+                Assert.AreEqual(chat.Id, chats[i].Id);
+                Assert.AreEqual(chat.CreatorId, chats[i].CreatorId);
+                Assert.AreEqual(chat.Users.Single().Id, chats[i++].Users.Single().Id);
+            }
+        }
+
+        [TestMethod]
+        public void Should_ReturnChatSpecificInfoForUser()
+        {
+            // arrange
+            var listenerUser = new User { Username = "testuser76", Hash = "asd" };
+            var regularUser = new User { Username = "testuser77", Hash = "asd" };
+
+            // act
+
+            listenerUser = _usersRepository.CreateUser(listenerUser.Username, listenerUser.Hash);
+            regularUser = _usersRepository.CreateUser(regularUser.Username, regularUser.Hash);
+            var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
+
+            _tempUsers.Add(listenerUser.Id);
+            _tempUsers.Add(regularUser.Id);
+            _tempChats.Add(chat.Id);
+
+            _chatsRepository.SetChatSpecificRole(listenerUser.Id, chat.Id, UserRoles.Listener);
+
+            // assert
+            Assert.AreEqual(listenerUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Listener);
+            Assert.AreEqual(regularUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Regular);
+            Assert.IsFalse(listenerUser.ChatUserInfos.Single().Role.WritePerm);
+            Assert.IsTrue(regularUser.ChatUserInfos.Single().Role.WritePerm);
+    }
+
         [TestCleanup]
         public void Clean()
         {
             foreach (var id in _tempUsers)
                 _usersRepository.DeleteUser(id);
+            foreach (var id in _tempChats)
+                _chatsRepository.DeleteChat(id);
         }
     }
 }

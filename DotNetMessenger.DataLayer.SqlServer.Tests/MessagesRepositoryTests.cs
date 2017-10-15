@@ -27,10 +27,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         [TestInitialize]
         public void InitRepos()
         {
-            _usersRepository = new UsersRepository(ConnectionString);
-            _chatsRepository = new ChatsRepository(ConnectionString, _usersRepository);
-            ((UsersRepository)_usersRepository).ChatsRepository = _chatsRepository;
-            _messagesRepository = new MessagesRepository(ConnectionString);
+            RepositoryBuilder.ConnectionString = ConnectionString;
+            _usersRepository = RepositoryBuilder.UsersRepository;
+            _chatsRepository = RepositoryBuilder.ChatsRepository;
+            _messagesRepository = RepositoryBuilder.MessagesRepository;
 
             _userId = _usersRepository.CreateUser("botAlfred", "hey man").Id;
             _chatId = _chatsRepository.CreateGroupChat(new[] {_userId}, "somechat").Id;
@@ -196,6 +196,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.AreEqual(msg.SenderId, _userId);
             Assert.AreEqual(msg.ChatId, _chatId);
             Assert.IsTrue(!msg.Attachments.Any());
+            // once more for other type of fetching
+            Assert.IsTrue(!msg.Attachments.Any());
+            Assert.IsNull(msg.ExpirationDate);
+            // once more for other type of fetching
             Assert.IsNull(msg.ExpirationDate);
             Assert.AreEqual(msg.Text, text);
         }
