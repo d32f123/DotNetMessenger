@@ -25,7 +25,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
         public User CreateUser(string userName, string hash)
         {
-            if (userName == string.Empty || hash == string.Empty)
+            if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(hash))
                 return null;
             
             using (var connection = new SqlConnection(_connectionString))
@@ -297,6 +297,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
         public void SetPassword(int userId, string newHash)
         {
             if (userId == 0)
+                return;
+            if (string.IsNullOrEmpty(newHash))
                 return;
             
             using (var connection = new SqlConnection(_connectionString))

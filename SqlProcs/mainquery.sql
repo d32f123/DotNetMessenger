@@ -76,7 +76,7 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
  );
 
  CREATE TABLE [UserRoles](
-	[ID]			TINYINT IDENTITY(0, 1),
+	[ID]			INT IDENTITY(0, 1),
 	[Name]			VARCHAR(20),
 	[ReadPerm]		BIT NOT NULL
 		CONSTRAINT	[DF_ReadPerm] DEFAULT 1,
@@ -101,7 +101,7 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
 	[UserID]		INT,
 	[ChatID]		INT,
 	[Nickname]		VARCHAR(30),
-	[UserRole]		TINYINT NOT NULL
+	[UserRole]		INT NOT NULL
 		CONSTRAINT	[DF_UserRole] DEFAULT 1,
 	CONSTRAINT		[PK_ChatUserInfos] PRIMARY KEY ([UserID], [ChatID]),
 	CONSTRAINT		[FK_ChatUserInfosChatUsers] FOREIGN KEY ([UserID], [ChatID]) 
@@ -142,7 +142,7 @@ CREATE INDEX [IX_MessagesDeleteQueue_ExpireDate] ON [MessagesDeleteQueue]([Expir
 
 
 CREATE TABLE [AttachmentTypes](
-	[ID]			TINYINT IDENTITY(0, 1),
+	[ID]			INT IDENTITY(0, 1),
 	[FileFormat]	VARCHAR(30),
 	CONSTRAINT		[PK_AttachmentTypes] PRIMARY KEY ([ID])
 );
@@ -151,7 +151,7 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
 
  CREATE TABLE [Attachments](
 	[ID]			INT IDENTITY(0, 1),
-	[Type]			TINYINT NOT NULL		-- 0 - image, 1 -- regular file
+	[Type]			INT NOT NULL		-- 0 - image, 1 -- regular file
 		CONSTRAINT DF_Type DEFAULT 0,
 	[AttachFile]	VARBINARY(MAX) NOT NULL,
 	[MessageID]		INT NOT NULL,  -- index candidate
@@ -162,9 +162,46 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
  CREATE INDEX [IX_Attachments_MessageID] ON [Attachments]([MessageID]);
 
  SELECT * FROM [Users];
+ SELECT * FROM [UserRoles];
  SELECT * FROM [Chats];
+ SELECT * FROM [ChatUserInfos];
+ SELECT [Nickname], [UserRole] FROM [ChatUserInfos] WHERE [UserID] = 0 AND [ChatID] = 0;
 
--- INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, 0);
+ GO
+
+CREATE OR ALTER FUNCTION Check_For_ChatUser_Combination (
+    @ChatID INT,
+	@UserID INT
+) RETURNS BIT
+AS
+BEGIN
+    IF EXISTS (SELECT * FROM [ChatUsers] WHERE [UserID] = @UserID AND [ChatID] = @ChatID)
+        RETURN 1
+    RETURN 0
+END
+GO
+
+CREATE OR ALTER TRIGGER [TR_Messages_Insert]
+	ON [Messages]
+FOR INSERT
+AS
+DECLARE @chatId INT,
+   @senderId INT
+SELECT @chatId = i.[ChatID],
+	@senderId = i.[SenderID]
+FROM INSERTED i
+IF ([dbo].Check_For_ChatUser_Combination(@chatId, @senderId) = 0)
+BEGIN
+	RAISERROR ('INSERT Messages Constraint FAILED', 16, 1)
+	ROLLBACK TRANSACTION
+END
+
+--INSERT INTO [Users] ([Username], [Password]) VALUES ('d32f123', 'asd');
+
+--INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText]) VALUES (0, 0, 'xd'); 
+---- INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [UserRole]) VALUES (0, 0, 1);
+--INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (0, 0);
+--INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, 0);
 -- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
 --	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
 --    VALUES (1, 0, 'hey');

@@ -10,17 +10,5 @@
             Title = string.Empty;
             Avatar = null;
         }
-
-        public ChatInfo(string title)
-        {
-            Title = title;
-            Avatar = null;
-        }
-
-        public ChatInfo(string title, byte[] avatar)
-        {
-            Title = title;
-            Avatar = avatar;
-        }
     }
 }

@@ -13,11 +13,11 @@ namespace DotNetMessenger.DataLayer
         Message GetMessage(int messageId);
         IEnumerable<Attachment> GetMessageAttachments(int messageId);
 
-        DateTime GetMessageExpirationDate(int messageId);
+        DateTime? GetMessageExpirationDate(int messageId);
 
         IEnumerable<Message> GetChatMessages(int chatId);
         IEnumerable<Message> GetChatMessagesFrom(int chatId, DateTime dateFrom);
-        IEnumerable<Message> GetChatMessageTo(int chatId, DateTime dateTo);
+        IEnumerable<Message> GetChatMessagesTo(int chatId, DateTime dateTo);
         IEnumerable<Message> GetChatMessagesInRange(int chatId, DateTime dateFrom, DateTime dateTo);
 
         IEnumerable<Message> SearchString(int chatId, string searchString);

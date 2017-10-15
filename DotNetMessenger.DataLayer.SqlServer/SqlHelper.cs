@@ -54,5 +54,29 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 return ((int)command.ExecuteScalar()) > 0;
             }
         }
+
+        public static bool IsSelectedRowFieldInRange(SqlConnection conn, string tableName, string idField, int id,
+            string field, IEnumerable<int> range)
+        {
+            using (var command = conn.CreateCommand())
+            {
+                var sb = new StringBuilder("SELECT COUNT(*) FROM ");
+                sb.Append(tableName).Append(" WHERE ").Append(idField).Append(" = @id AND ").Append(field)
+                    .Append(" IN (");
+
+                var i = 0;
+                foreach (var rangeValue in range)
+                {
+                    sb.Append("@value").Append(i).Append(", ");
+                    command.Parameters.AddWithValue("@value" + i++, rangeValue);
+                }
+                sb.Remove(sb.Length - 2, 2).Append(")");
+                command.CommandText = sb.ToString();
+
+                command.Parameters.AddWithValue("@id", id);
+
+                return ((int) command.ExecuteScalar()) > 0;
+            }
+        }
     }
 }

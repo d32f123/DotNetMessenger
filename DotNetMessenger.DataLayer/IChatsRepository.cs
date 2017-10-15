@@ -28,5 +28,6 @@ namespace DotNetMessenger.DataLayer
         ChatUserInfo GetChatSpecificInfo(int userId, int chatId);
         void SetChatSpecificInfo(int userId, int chatId, ChatUserInfo userInfo, bool updateRole = false);
         ChatUserInfo SetChatSpecificRole(int userId, int chatId, UserRoles userRole);
+        void DeleteChatSpecificInfo(int userId, int chatId);
     }
 }
