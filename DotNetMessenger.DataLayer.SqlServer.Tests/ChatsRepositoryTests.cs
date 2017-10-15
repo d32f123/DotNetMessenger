@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using DotNetMessenger.Model;
@@ -94,6 +95,33 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             // assert
             Assert.IsNull(chat);
+        }
+
+        [TestMethod]
+        public void Should_ReturnNull_When_GetUsersForInvalidChat()
+        {
+            // act
+            var users = _chatsRepository.GetChatUsers(Chat.InvalidId);
+            // assert
+            Assert.IsTrue(!users.Any());
+        }
+
+        [TestMethod]
+        public void Should_ReturnNull_When_GetChatsForInvalidUser()
+        {
+            // act
+            var chats = _chatsRepository.GetUserChats(User.InvalidId);
+            // assert
+            Assert.IsFalse(chats.Any());
+        }
+
+        [TestMethod]
+        public void Should_ReturnNull_When_GetChatsForDefaultUser()
+        {
+            // act
+            var chats = _chatsRepository.GetUserChats(0);
+            // assert
+            Assert.IsFalse(chats.Any());
         }
 
         [TestMethod]
@@ -1040,6 +1068,23 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.IsNull(chat);
         }
 
+        [TestMethod]
+        public void Should_DoNothing_When_KicksIsNull()
+        {
+            // arrange 
+            var user = new User { Username = "testuser75", Hash = "asd" };
+
+            // act
+            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            _tempUsers.Add(user.Id);
+            var chat = _chatsRepository.CreateGroupChat(new[] {user.Id}, "hey");
+
+            _chatsRepository.KickUsers(chat.Id, null);
+            var newChat = _chatsRepository.GetChat(chat.Id);
+            // assert
+            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
+        }
+
 
         [TestMethod]
         public void Should_SetRole_When_SetRoleForChat()
@@ -1094,6 +1139,28 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
+        public void Should_ReturnNull_When_SetChatSpecificRoleForDefaultUser()
+        {
+            // arrange
+            var listenerUser = new User { Username = "testuser76", Hash = "asd" };
+            var regularUser = new User { Username = "testuser77", Hash = "asd" };
+
+            // act
+
+            listenerUser = _usersRepository.CreateUser(listenerUser.Username, listenerUser.Hash);
+            regularUser = _usersRepository.CreateUser(regularUser.Username, regularUser.Hash);
+            var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
+
+            _tempUsers.Add(listenerUser.Id);
+            _tempUsers.Add(regularUser.Id);
+            _tempChats.Add(chat.Id);
+
+            var nullVal = _chatsRepository.SetChatSpecificRole(0, chat.Id, UserRoles.Regular);
+            // assert
+            Assert.IsNull(nullVal);
+        }
+
+        [TestMethod]
         public void Should_ReturnNull_When_SetRoleForInvalidChat()
         {
             // arrange
@@ -1129,6 +1196,26 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // assert
             Assert.AreEqual(moderatorRole.RoleType, UserRoles.Moderator);
             Assert.IsTrue(moderatorRole.ManageUsersPerm);
+        }
+
+        [TestMethod]
+        public void Should_DoNothing_When_DeleteChatSpecificInfoForDefaultUser()
+        {
+            // arrange
+            var user = new User {Username = "asdajklsd", Hash = "asd"};
+
+            // act
+            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var chat = _chatsRepository.CreateGroupChat(new [] {user.Id}, "newChat");
+            _tempUsers.Add(user.Id);
+            _tempChats.Add(chat.Id);
+
+            _chatsRepository.DeleteChatSpecificInfo(0, chat.Id);
+            var chatSpecificInfo = _chatsRepository.GetChatSpecificInfo(0, chat.Id);
+
+            // assert
+            Assert.IsNull(chatSpecificInfo);
+
         }
 
         [TestMethod]

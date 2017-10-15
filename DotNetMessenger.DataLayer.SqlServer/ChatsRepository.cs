@@ -266,6 +266,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
         public IEnumerable<Chat> GetUserChats(int userId)
         {
+            if (userId == 0)
+                yield break;
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -457,30 +459,27 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             if (newCreator == 0)
                 return;
-            try
+
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+                // check if chat is dialog
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                    return;
+                // check if user is in chat
+                if (!SqlHelper.DoesDoubleKeyExist(connection, "ChatUsers", "UserID", newCreator, "ChatID", chatId))
+                    return;
+
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
-                    // check if chat is dialog
-                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
-                        return;
-                    // check if user is in chat
-                    if (!SqlHelper.DoesDoubleKeyExist(connection, "ChatUsers", "UserID", newCreator, "ChatID", chatId))
-                        return;
+                    command.CommandText = "UPDATE [Chats] SET [CreatorID] = @newCreator WHERE [ID] = @chatId";
 
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = "UPDATE [Chats] SET [CreatorID] = @newCreator WHERE [ID] = @chatId";
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    command.Parameters.AddWithValue("@newCreator", newCreator);
 
-                        command.Parameters.AddWithValue("@chatId", chatId);
-                        command.Parameters.AddWithValue("@newCreator", newCreator);
-
-                        command.ExecuteNonQuery();
-                    }
+                    command.ExecuteNonQuery();
                 }
             }
-            catch (SqlException) { }
         }
 
         public ChatUserInfo GetChatSpecificInfo(int userId, int chatId)
@@ -587,8 +586,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.Parameters.AddWithValue("@userId", userId);
                         if (updateRole)
                         {
-                            command.Parameters.AddWithValue("@userRole",
-                                (int) (userInfo.Role?.RoleType ?? UserRoles.Regular));
+                            command.Parameters.AddWithValue("@userRole", (int) userInfo.Role?.RoleType);
                         }
 
                         command.ExecuteNonQuery();
