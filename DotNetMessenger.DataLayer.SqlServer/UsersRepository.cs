@@ -31,11 +31,14 @@ namespace DotNetMessenger.DataLayer.SqlServer
             {
                 connection.Open();
 
+                // Does username exist?
                 if (SqlHelper.DoesFieldValueExist(connection, "Users", "Username", userName, SqlDbType.VarChar, userName.Length))
                     return null;
                 using (var transaction = connection.BeginTransaction())
                 {
                     UserSqlProxy user;
+
+                    // make an entry in users table
                     using (var command = connection.CreateCommand())
                     {
                         command.Transaction = transaction;
@@ -49,6 +52,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         user = new UserSqlProxy {Chats = null, Hash = hash, Id = id, UserInfo = null, Username = userName};
                     }
 
+                    // make entry in userinfos table
                     using (var command = connection.CreateCommand())
                     {
                         command.Transaction = transaction;
@@ -95,9 +99,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-
-                if (!SqlHelper.DoesFieldValueExist(connection, "Users", "ID", userId, SqlDbType.Int))
-                    return null;
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT [ID], [Username], [Password] FROM [Users] WHERE [ID] = @userId";
@@ -106,6 +107,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     var user = new UserSqlProxy();
                     using (var reader = command.ExecuteReader())
                     {
+                        if (!reader.HasRows)
+                            return null;
                         reader.Read();
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Hash = reader.GetString(reader.GetOrdinal("Password"));
@@ -121,6 +124,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
+                // check if user and userinfo entry exist (for possible exception throw in the future)
                 if (!SqlHelper.DoesFieldValueExist(connection, "Users", "ID", userId, SqlDbType.Int)
                     || !SqlHelper.DoesFieldValueExist(connection, "UserInfos", "UserID", userId, SqlDbType.Int))
                     return;
@@ -138,9 +142,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-
-                if (!SqlHelper.DoesFieldValueExist(connection, "UserInfos", "UserID", userId, SqlDbType.Int))
-                    return null;
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT [LastName], [FirstName], [Phone], [Email], [DateOfBirth], [Avatar]" +
@@ -150,6 +151,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     using (var reader = command.ExecuteReader())
                     {
+                        if (!reader.HasRows)
+                            return null;
                         reader.Read();
                         return new UserInfo
                         {
@@ -172,81 +175,88 @@ namespace DotNetMessenger.DataLayer.SqlServer
             if (userInfo == null)
                 return;
 
-            using (var connection = new SqlConnection(_connectionString))
+            try
             {
-                connection.Open();
-
-                if (!SqlHelper.DoesFieldValueExist(connection, "Users", "ID", userId, SqlDbType.Int))
-                    return;
-                using (var command = connection.CreateCommand())
+                using (var connection = new SqlConnection(_connectionString))
                 {
-                    if (SqlHelper.DoesFieldValueExist(connection, "UserInfos", "UserID", userId, SqlDbType.Int))
+                    connection.Open();
+                    using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = "UPDATE [UserInfos] SET [LastName] = @lastName, [FirstName] = @firstName, " +
-                                          "[Phone] = @phone, [Email] = @email, [DateOfBirth] = @dateOfBirth, " +
-                                          "[Avatar] = @avatar WHERE [UserID] = @userId";
-                    }
-                    else
-                    {
-                        command.CommandText =
-                            "INSERT INTO [UserInfos] ([UserID], [LastName], [FirstName], [Phone], [Email], [DateOfBirth], " +
-                            "[Avatar]) VALUES (@userId, @lastName, @firstName, @phone, @email, @dateOfBirth, @avatar)";
-                    }
+                        // check if entry of the user exists
+                        if (SqlHelper.DoesFieldValueExist(connection, "UserInfos", "UserID", userId, SqlDbType.Int))
+                        {
+                            command.CommandText =
+                                "UPDATE [UserInfos] SET [LastName] = @lastName, [FirstName] = @firstName, " +
+                                "[Phone] = @phone, [Email] = @email, [DateOfBirth] = @dateOfBirth, " +
+                                "[Avatar] = @avatar WHERE [UserID] = @userId";
+                        }
+                        else
+                        {
+                            command.CommandText =
+                                "INSERT INTO [UserInfos] ([UserID], [LastName], [FirstName], [Phone], [Email], [DateOfBirth], " +
+                                "[Avatar]) VALUES (@userId, @lastName, @firstName, @phone, @email, @dateOfBirth, @avatar)";
+                        }
 
-                    command.Parameters.AddWithValue("@userId", userId);
+                        command.Parameters.AddWithValue("@userId", userId);
 
-                    if (userInfo.LastName == null)
-                    {
-                        command.Parameters.AddWithValue("@lastName", DBNull.Value);
-                    }
-                    else
-                    {
-                        command.Parameters.AddWithValue("@lastName", userInfo.LastName);
-                    }
+                        if (userInfo.LastName == null)
+                        {
+                            command.Parameters.AddWithValue("@lastName", DBNull.Value);
+                        }
+                        else
+                        {
+                            command.Parameters.AddWithValue("@lastName", userInfo.LastName);
+                        }
 
-                    if (userInfo.FirstName == null)
-                    {
-                        command.Parameters.AddWithValue("@firstName", DBNull.Value);
-                    }
-                    else
-                    {
-                        command.Parameters.AddWithValue("@firstName", userInfo.FirstName);
-                    }
+                        if (userInfo.FirstName == null)
+                        {
+                            command.Parameters.AddWithValue("@firstName", DBNull.Value);
+                        }
+                        else
+                        {
+                            command.Parameters.AddWithValue("@firstName", userInfo.FirstName);
+                        }
 
-                    if (userInfo.Phone == null)
-                    {
-                        command.Parameters.AddWithValue("@phone", DBNull.Value);
-                    }
-                    else
-                    {
-                        command.Parameters.AddWithValue("@phone", userInfo.Phone);
-                    }
+                        if (userInfo.Phone == null)
+                        {
+                            command.Parameters.AddWithValue("@phone", DBNull.Value);
+                        }
+                        else
+                        {
+                            command.Parameters.AddWithValue("@phone", userInfo.Phone);
+                        }
 
-                    if (userInfo.Email == null)
-                    {
-                        command.Parameters.AddWithValue("@email", DBNull.Value);
-                    }
-                    else
-                    {
-                        command.Parameters.AddWithValue("@email", userInfo.Email);
-                    }
+                        if (userInfo.Email == null)
+                        {
+                            command.Parameters.AddWithValue("@email", DBNull.Value);
+                        }
+                        else
+                        {
+                            command.Parameters.AddWithValue("@email", userInfo.Email);
+                        }
 
-                    command.Parameters.AddWithValue("@dateOfBirth", userInfo.DateOfBirth);
+                        command.Parameters.AddWithValue("@dateOfBirth", userInfo.DateOfBirth);
 
-                    if (userInfo.Avatar == null)
-                    {
-                        command.Parameters.Add(new SqlParameter("@avatar", SqlDbType.VarBinary) {Value = DBNull.Value});
-                    }
-                    else
-                    {
-                        var avatar =
-                            new SqlParameter("@avatar", SqlDbType.VarBinary, userInfo.Avatar.Length)
-                                {Value = userInfo.Avatar};
-                        command.Parameters.Add(avatar);
-                    }
+                        if (userInfo.Avatar == null)
+                        {
+                            command.Parameters.Add(
+                                new SqlParameter("@avatar", SqlDbType.VarBinary) {Value = DBNull.Value});
+                        }
+                        else
+                        {
+                            var avatar =
+                                new SqlParameter("@avatar", SqlDbType.VarBinary, userInfo.Avatar.Length)
+                                    {Value = userInfo.Avatar};
+                            command.Parameters.Add(avatar);
+                        }
 
-                    command.ExecuteNonQuery();
+                        command.ExecuteNonQuery();
+                    }
                 }
+            }
+            catch (SqlException)
+            {
+                // means that the user does not exist
             }
         }
 
@@ -257,37 +267,42 @@ namespace DotNetMessenger.DataLayer.SqlServer
             // Check for default user change
             if (user.Id == 0)
                 return null;
-            
-            using (var connection = new SqlConnection(_connectionString))
+
+            try
             {
-                connection.Open();
-
-                var idExists = SqlHelper.DoesFieldValueExist(connection, "Users", "ID", user.Id, SqlDbType.Int);
-                // If ID does not exist, but username exists, then we cannot create a new user!
-                if (!idExists && SqlHelper.DoesFieldValueExist(connection, "Users", "Username", user.Username, SqlDbType.VarChar,
-                        user.Username.Length))
-                    return null;
-                using (var command = connection.CreateCommand())
+                using (var connection = new SqlConnection(_connectionString))
                 {
-                    command.CommandText = idExists ? 
-                        "UPDATE [Users] SET [Username] = @userName, [Password] = @password WHERE [ID] = @userId" 
-                        : "INSERT INTO [Users] ([Username], [Password]) OUTPUT INSERTED.[ID] VALUES (@userName, @password)";
+                    connection.Open();
 
-                    if (idExists)
-                        command.Parameters.AddWithValue("@userId", user.Id);
-                    command.Parameters.AddWithValue("@userName", user.Username);
-                    command.Parameters.AddWithValue("@password", user.Hash);
+                    // check if id already exists
+                    var idExists = SqlHelper.DoesFieldValueExist(connection, "Users", "ID", user.Id, SqlDbType.Int);
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = idExists
+                            ? "UPDATE [Users] SET [Username] = @userName, [Password] = @password WHERE [ID] = @userId"
+                            : "INSERT INTO [Users] ([Username], [Password]) OUTPUT INSERTED.[ID] VALUES (@userName, @password)";
 
-                    if (idExists)
-                        command.ExecuteNonQuery();
-                    else
-                        user.Id = (int) command.ExecuteScalar();    
+                        if (idExists)
+                            command.Parameters.AddWithValue("@userId", user.Id);
+                        command.Parameters.AddWithValue("@userName", user.Username);
+                        command.Parameters.AddWithValue("@password", user.Hash);
 
-                    if (user.UserInfo != null)
-                        SetUserInfo(user.Id, user.UserInfo);
-                    return user;
+                        if (idExists)
+                            command.ExecuteNonQuery();
+                        else
+                            user.Id = (int) command.ExecuteScalar();
+
+                        if (user.UserInfo != null)
+                            SetUserInfo(user.Id, user.UserInfo);
+                        return user;
+                    }
+
                 }
-
+            }
+            catch (SqlException)
+            {
+                // means that we tried to create a user, but username is taken
+                return null;
             }
         }
 

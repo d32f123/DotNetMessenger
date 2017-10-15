@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Transactions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
@@ -271,8 +270,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                                 Text = reader.GetString(reader.GetOrdinal("MessageText")),
                                 SenderId = reader.GetInt32(reader.GetOrdinal("SenderID")),
                                 Date = reader.GetDateTime(reader.GetOrdinal("MessageDate")),
-                                Attachments = GetMessageAttachments(reader.GetInt32(reader.GetOrdinal("ID"))),
-                                ExpirationDate = GetMessageExpirationDate(reader.GetInt32(reader.GetOrdinal("ID")))
                             };
                         }
                     }

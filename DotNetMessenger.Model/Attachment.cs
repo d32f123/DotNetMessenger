@@ -2,6 +2,9 @@
 
 namespace DotNetMessenger.Model
 {
+    /// <summary>
+    /// Class represents a single attachment file or image
+    /// </summary>
     public class Attachment
     {
         public int Id { get; set; }

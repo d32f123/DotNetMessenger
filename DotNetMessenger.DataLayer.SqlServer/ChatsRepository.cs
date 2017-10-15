@@ -41,6 +41,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
                         (int) ChatTypes.Dialog))
                         return;
+
+                    // make an entry in chatusers table
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText = "INSERT INTO [ChatUsers]([UserID], [ChatID]) VALUES " +
@@ -50,6 +52,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                         command.ExecuteNonQuery();
                     }
+                    // make an entry in chatuserinfos table
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText =
@@ -62,7 +65,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     }
                 }
             }
-            catch (SqlException) {}
+            catch (SqlException)
+            {
+                // means that one of the ids is invalid
+            }
         }
 
         public void AddUsers(int chatId, IEnumerable<int> newUsers)
@@ -79,12 +85,14 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     connection.Open();
 
                     if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
-                        (int)ChatTypes.Dialog))
+                        (int) ChatTypes.Dialog))
                         return;
                     using (var command = connection.CreateCommand())
                     {
+                        // call a stored procedure
                         command.CommandType = CommandType.StoredProcedure;
                         command.CommandText = "AddUsersToChat";
+
 
                         var parameter =
                             command.Parameters.AddWithValue("@IDList", SqlHelper.IdListToDataTable(idList));
@@ -95,7 +103,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     }
                 }
             }
-            catch (SqlException) { }
+            catch (SqlException)
+            {
+                // means that some ids are invalid
+            }
         }
 
         public Chat GetChat(int chatId)
@@ -112,6 +123,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     using (var reader = command.ExecuteReader())
                     {
+                        // if select returned no rows
                         if (!reader.HasRows)
                             return null;
                         reader.Read();
@@ -209,6 +221,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
             }
             catch
             {
+                // means that a member is invalid (no such user)
                 return null;
             }
         }
@@ -513,6 +526,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     }
                 }
 
+                // get permissions
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText =
@@ -554,6 +568,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 {
                     connection.Open();
 
+                    // is there an entry in the table already?
                     var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
                         "[ChatID]", chatId);
                     using (var command = connection.CreateCommand())
@@ -561,6 +576,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         var sb = new StringBuilder();
                         if (infoExists)
                         {
+                            // if there is already an entry, update it
                             sb.Append("UPDATE [ChatUserInfos] SET [Nickname] = @nickName");
                             if (updateRole)
                                 sb.Append(", [UserRole] = @userRole");
@@ -568,6 +584,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         }
                         else
                         {
+                            // else create a new one
                             sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [Nickname]");
                             sb.Append(updateRole ? ", [UserRole]) " : ") ");
                             sb.Append("VALUES (@userId, @chatId, @nickName");
@@ -580,7 +597,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.Parameters.AddWithValue("@userId", userId);
                         if (updateRole)
                         {
-                            command.Parameters.AddWithValue("@userRole", (int) userInfo.Role?.RoleType);
+                            command.Parameters.AddWithValue("@userRole", (int) userInfo.Role.RoleType);
                         }
 
                         command.ExecuteNonQuery();
