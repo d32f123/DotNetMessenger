@@ -44,17 +44,14 @@
     <Compile Include="Chat.cs" />
     <Compile Include="ChatInfo.cs" />
     <Compile Include="ChatUserInfo.cs" />
+    <Compile Include="Enums\AttachmentTypes.cs" />
+    <Compile Include="Enums\ChatTypes.cs" />
+    <Compile Include="Enums\UserRoles.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="User.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UserInfo.cs" />
     <Compile Include="UserRole.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DotNetMessenger.Model.Enums\DotNetMessenger.Model.Enums.csproj">
-      <Project>{2b5d0df9-5e22-4894-89df-71cd50aa4010}</Project>
-      <Name>DotNetMessenger.Model.Enums</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

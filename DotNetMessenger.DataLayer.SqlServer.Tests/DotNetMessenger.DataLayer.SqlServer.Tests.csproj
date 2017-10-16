@@ -66,10 +66,6 @@
       <Project>{7571a909-12da-4c29-8ba0-a7a21732046e}</Project>
       <Name>DotNetMessenger.DataLayer</Name>
     </ProjectReference>
-    <ProjectReference Include="..\DotNetMessenger.Model.Enums\DotNetMessenger.Model.Enums.csproj">
-      <Project>{2b5d0df9-5e22-4894-89df-71cd50aa4010}</Project>
-      <Name>DotNetMessenger.Model.Enums</Name>
-    </ProjectReference>
     <ProjectReference Include="..\DotNetMessenger.Model\DotNetMessenger.Model.csproj">
       <Project>{79aefa90-761c-4eab-94f0-3e3dee808b7f}</Project>
       <Name>DotNetMessenger.Model</Name>
