@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Transactions;
+using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 

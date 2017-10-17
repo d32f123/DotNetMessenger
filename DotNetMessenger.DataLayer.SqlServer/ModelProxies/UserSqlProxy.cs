@@ -2,7 +2,7 @@
 using System.Linq;
 using DotNetMessenger.Model;
 
-namespace DotNetMessenger.DataLayer.SqlServer
+namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
 {
     public class UserSqlProxy : User
     {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Model;
 
 namespace DotNetMessenger.DataLayer.SqlServer
@@ -113,6 +114,33 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Hash = reader.GetString(reader.GetOrdinal("Password"));
                         user.Username = reader.GetString(reader.GetOrdinal("Username"));
+                    }
+                    return user;
+                }
+            }
+        }
+
+        public User GetUserByUsername(string userName)
+        {
+            if (string.IsNullOrEmpty(userName))
+                return null;
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT [ID], [Password] FROM [Users] WHERE [Username] = @userName";
+                    command.Parameters.AddWithValue("@userName", userName);
+
+                    var user = new UserSqlProxy();
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            return null;
+                        reader.Read();
+                        user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
+                        user.Hash = reader.GetString(reader.GetOrdinal("Password"));
+                        user.Username = userName;
                     }
                     return user;
                 }

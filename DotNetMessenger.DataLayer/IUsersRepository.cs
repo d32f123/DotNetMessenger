@@ -23,6 +23,12 @@ namespace DotNetMessenger.DataLayer
         /// <returns>Null on invalidId, else object representing given user</returns>
         User GetUser(int userId);
         /// <summary>
+        /// Gets a user from DB given their <paramref name="userName"/>
+        /// </summary>
+        /// <param name="userName">The username of the user</param>
+        /// <returns>Null on invalid username, else object representing given user</returns>
+        User GetUserByUsername(string userName);
+        /// <summary>
         /// Gets information about the user (last name et c.)
         /// </summary>
         /// <param name="userId">The id of the user</param>

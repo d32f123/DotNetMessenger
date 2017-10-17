@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace DotNetMessenger.Model
 {
     /// <summary>
     /// Class represents a single user entity
     /// </summary>
-    public class User
+    public class User : IComparable<User>
     {
         public static readonly int InvalidId = -1;
 
@@ -36,6 +37,44 @@ namespace DotNetMessenger.Model
         public User()
         {
             Id = InvalidId;
+        }
+
+        int IComparable<User>.CompareTo(User other)
+        {
+            if (other == null)
+                return 1;
+            if (Id < other.Id)
+                return -1;
+            if (Id > other.Id)
+                return 1;
+            if (string.Compare(Username, other.Username, StringComparison.Ordinal) != 0)
+                return string.Compare(Username, other.Username, StringComparison.Ordinal);
+            if (string.Compare(Hash, other.Hash, StringComparison.Ordinal) != 0)
+                return string.Compare(Hash, other.Hash, StringComparison.Ordinal);
+            return 0;
+        }
+
+        public override bool Equals(Object obj)
+        {
+            var other = obj as User;
+            if (this == other)
+                return true;
+
+            if (other == null)
+                return false;
+
+            if (Id != other.Id)
+                return false;
+            if (string.Compare(Username, other.Username, StringComparison.Ordinal) != 0)
+                return false;
+            if (string.Compare(Hash, other.Hash, StringComparison.Ordinal) != 0)
+                return false;
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
     }
 }

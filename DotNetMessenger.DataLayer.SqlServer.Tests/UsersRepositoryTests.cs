@@ -320,6 +320,38 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
+        public void Should_GetUserByUsername()
+        {
+            // arrange
+            const string userName = "d32f123";
+            var user = new User {Username = userName, Hash = "asd"};
+            // act
+            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            _tempUsers.Add(user.Id);
+            var retUser = _usersRepository.GetUserByUsername(user.Username);
+            // assert
+            Assert.AreEqual(user, retUser);
+        }
+
+        [TestMethod]
+        public void Should_ReturnNullOnInvalidUsername()
+        {
+            // act
+            var user = _usersRepository.GetUserByUsername("null");
+            // assert
+            Assert.IsNull(user);
+        }
+
+        [TestMethod]
+        public void Should_ReturnNullOnNullUsername()
+        {
+            // act
+            var user = _usersRepository.GetUserByUsername(null);
+            // assert
+            Assert.IsNull(user);
+        }
+
+        [TestMethod]
         public void ShouldStartChatWithUser()
         {
             //arrange

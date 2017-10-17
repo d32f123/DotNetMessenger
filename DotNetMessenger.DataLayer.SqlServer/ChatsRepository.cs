@@ -7,6 +7,7 @@ using System.Text;
 using System.Transactions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
+using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 
 
 namespace DotNetMessenger.DataLayer.SqlServer

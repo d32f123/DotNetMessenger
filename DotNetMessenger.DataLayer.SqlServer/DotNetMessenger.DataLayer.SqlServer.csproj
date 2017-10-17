@@ -41,13 +41,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ChatSqlProxy.cs" />
+    <Compile Include="ModelProxies\ChatSqlProxy.cs" />
     <Compile Include="ChatsRepository.cs" />
-    <Compile Include="MessageSqlProxy.cs" />
+    <Compile Include="ModelProxies\MessageSqlProxy.cs" />
     <Compile Include="RepositoryBuilder.cs" />
     <Compile Include="SqlHelper.cs" />
     <Compile Include="MessagesRepository.cs" />
-    <Compile Include="UserSqlProxy.cs" />
+    <Compile Include="ModelProxies\UserSqlProxy.cs" />
     <Compile Include="UsersRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
