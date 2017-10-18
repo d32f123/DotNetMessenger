@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
+using DotNetMessenger.WebApi.Models;
 
 namespace DotNetMessenger.DataLayer.SqlServer.Tests
 {
@@ -32,40 +34,38 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_CreateUser_When_ValidUser()
         {
             //arrange
-            var user = new User
+            var user = new UserCredentials
             {
                 Username = "testuser1",
-                Hash = "x"
+                Password = "x"
             };
 
             //act
-            var result = _usersRepository.CreateUser(user.Username, user.Hash);
+            var result = _usersRepository.CreateUser(user.Username, user.Password);
 
             _tempUsers.Add(result.Id);
 
             //assert
             Assert.AreEqual(user.Username, result.Username);
-            Assert.AreEqual(user.Hash, result.Hash);
         }
 
         [TestMethod]
         public void Should_ReturnCreatedUser_When_ValidUser()
         {
             //arrange
-            var user = new User
+            var user = new UserCredentials
             {
                 Username = "testuser1",
-                Hash = "x"
+                Password = "x"
             };
 
             //act
-            var result = _usersRepository.CreateUser(user.Username, user.Hash);
+            var result = _usersRepository.CreateUser(user.Username, user.Password);
             result = _usersRepository.GetUser(result.Id);
             _tempUsers.Add(result.Id);
 
             //assert
             Assert.AreEqual(user.Username, result.Username);
-            Assert.AreEqual(user.Hash, result.Hash);
         }
 
         [TestMethod]
@@ -79,51 +79,47 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_EmptyLoginOrPassword()
+        public void Should_ThrowArgumentNullException_When_EmptyLoginOrPassword()
         {
             // arrange
-            var emptyUser = new User
+            var emptyUser = new UserCredentials
             {
                 Username = "",
-                Hash = ""
+                Password = ""
             };
 
-            // act 
-            var result = _usersRepository.CreateUser(emptyUser.Username, emptyUser.Hash);
-            
-            // assert
-            Assert.IsNull(result);
+            // act and assert
+            Assert.ThrowsException<ArgumentNullException>(() => _usersRepository.CreateUser(emptyUser.Username, emptyUser.Password));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_CreatingDuplicateUser()
+        public void Should_ThrowUserAlreadyExistsException_When_CreatingDuplicateUser()
         {
             // arrange
-            var user = new User
+            var user = new UserCredentials
             {
                 Username = "testuser2",
-                Hash = "x"
+                Password = "x"
             };
 
             // act
-            _tempUsers.Add(_usersRepository.CreateUser(user.Username, user.Hash).Id);
-            var result = _usersRepository.CreateUser(user.Username, user.Hash);
+            _tempUsers.Add(_usersRepository.CreateUser(user.Username, user.Password).Id);
             // assert
-            Assert.IsNull(result);
+            Assert.ThrowsException<UserAlreadyExistsException>(() =>_usersRepository.CreateUser(user.Username, user.Password));
         }
 
         [TestMethod]
         public void Should_DeleteNewUser()
         {
             // arrange
-            var user = new User
+            var user = new UserCredentials
             {
                 Username = "testuser3",
-                Hash = "x"
+                Password = "x"
             };
 
             // act
-            var addedUser = _usersRepository.CreateUser(user.Username, user.Hash);
+            var addedUser = _usersRepository.CreateUser(user.Username, user.Password);
             _usersRepository.DeleteUser(addedUser.Id);
             var deletedUser = _usersRepository.GetUser(addedUser.Id);
 
@@ -132,22 +128,18 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_NotDeleteUser_When_DefaultUser()
+        public void Should_ThrowArgumentException_When_DeleteDefaultUser()
         {
-            // act
-            _usersRepository.DeleteUser(0);
-            var defaultUser = _usersRepository.GetUser(0);
-
-            // assert
-            Assert.IsNotNull(defaultUser);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() =>_usersRepository.DeleteUser(0));
+            
         }
 
         [TestMethod]
-        public void Should_DoNothing_OnInvalidId()
+        public void Should_ThrowArgumentException_OnInvalidId()
         {
-            // act
-            _usersRepository.DeleteUser(User.InvalidId);
-            Assert.IsTrue(true);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.DeleteUser(User.InvalidId));
         }
 
         [TestMethod]
@@ -161,23 +153,22 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 Email = "xxx@yandex.ru",
                 Avatar = Encoding.UTF8.GetBytes("testAvatar")
             };
-            var user = new User {Username = "testuser4", Hash = "x", UserInfo = userInfo};
+            var user = new UserCredentials{Username = "testuser4", Password = "x"};
 
             // act
-            var userId = _usersRepository.CreateUser(user.Username, user.Hash).Id;
+            var userId = _usersRepository.CreateUser(user.Username, user.Password).Id;
             _tempUsers.Add(userId);
             _usersRepository.SetUserInfo(userId, userInfo);
             var returnedUser = _usersRepository.GetUser(userId);
             
             // assert
             Assert.AreEqual(user.Username, returnedUser.Username);
-            Assert.AreEqual(user.Hash, returnedUser.Hash);
-            Assert.AreEqual(user.UserInfo.LastName, returnedUser.UserInfo.LastName);
-            Assert.AreEqual(user.UserInfo.FirstName, returnedUser.UserInfo.FirstName);
-            Assert.AreEqual(user.UserInfo.Email, returnedUser.UserInfo.Email);
-            Assert.IsTrue(user.UserInfo.Avatar.SequenceEqual(returnedUser.UserInfo.Avatar));
-            Assert.AreEqual(user.UserInfo.DateOfBirth.Date, returnedUser.UserInfo.DateOfBirth);
-            Assert.AreEqual(user.UserInfo.Phone, returnedUser.UserInfo.Phone);
+            Assert.AreEqual(userInfo.LastName, returnedUser.UserInfo.LastName);
+            Assert.AreEqual(userInfo.FirstName, returnedUser.UserInfo.FirstName);
+            Assert.AreEqual(userInfo.Email, returnedUser.UserInfo.Email);
+            Assert.IsTrue(userInfo.Avatar.SequenceEqual(returnedUser.UserInfo.Avatar));
+            Assert.AreEqual(userInfo.DateOfBirth?.Date, returnedUser.UserInfo.DateOfBirth);
+            Assert.AreEqual(userInfo.Phone, returnedUser.UserInfo.Phone);
         }
 
         [TestMethod]
@@ -193,10 +184,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 LastName = null,
                 Phone = null
             };
-            var user = new User {Username = "testuser5", Hash = "x", UserInfo = userInfo};
+            var user = new UserCredentials{Username = "testuser5", Password = "x"};
 
             // act
-            var userId = _usersRepository.CreateUser(user.Username, user.Hash).Id;
+            var userId = _usersRepository.CreateUser(user.Username, user.Password).Id;
             _tempUsers.Add(userId);
             _usersRepository.SetUserInfo(userId, userInfo);
             var returnedUser = _usersRepository.GetUser(userId);
@@ -205,7 +196,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.IsNull(returnedUser.UserInfo.LastName);
             Assert.IsNull(returnedUser.UserInfo.FirstName);
             Assert.IsNull(returnedUser.UserInfo.Email);
-            Assert.AreEqual(user.UserInfo.DateOfBirth.Date, returnedUser.UserInfo.DateOfBirth);
+            Assert.AreEqual(userInfo.DateOfBirth?.Date, returnedUser.UserInfo.DateOfBirth);
             Assert.IsNull(returnedUser.UserInfo.Phone);
         }
 
@@ -222,27 +213,26 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 LastName = "",
                 Phone = ""
             };
-            var user = new User { Username = "testuser5", Hash = "x", UserInfo = userInfo };
+            var user = new UserCredentials{ Username = "testuser5", Password = "x" };
 
             // act
-            var userId = _usersRepository.CreateUser(user.Username, user.Hash).Id;
+            var userId = _usersRepository.CreateUser(user.Username, user.Password).Id;
             _tempUsers.Add(userId);
             _usersRepository.SetUserInfo(userId, userInfo);
             var returnedUser = _usersRepository.GetUser(userId);
 
             // assert
             Assert.AreEqual(user.Username, returnedUser.Username);
-            Assert.AreEqual(user.Hash, returnedUser.Hash);
-            Assert.AreEqual(user.UserInfo.LastName, returnedUser.UserInfo.LastName);
-            Assert.AreEqual(user.UserInfo.FirstName, returnedUser.UserInfo.FirstName);
-            Assert.AreEqual(user.UserInfo.Email, returnedUser.UserInfo.Email);
-            Assert.IsTrue(user.UserInfo.Avatar.SequenceEqual(returnedUser.UserInfo.Avatar));
-            Assert.AreEqual(user.UserInfo.DateOfBirth.Date, returnedUser.UserInfo.DateOfBirth);
-            Assert.AreEqual(user.UserInfo.Phone, returnedUser.UserInfo.Phone);
+            Assert.AreEqual(userInfo.LastName, returnedUser.UserInfo.LastName);
+            Assert.AreEqual(userInfo.FirstName, returnedUser.UserInfo.FirstName);
+            Assert.AreEqual(userInfo.Email, returnedUser.UserInfo.Email);
+            Assert.IsTrue(userInfo.Avatar.SequenceEqual(returnedUser.UserInfo.Avatar));
+            Assert.AreEqual(userInfo.DateOfBirth?.Date, returnedUser.UserInfo.DateOfBirth);
+            Assert.AreEqual(userInfo.Phone, returnedUser.UserInfo.Phone);
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SetInfoForInvalidUser()
+        public void Should_ThrowArgumentException_When_SetInfoForInvalidUser()
         {
             // arrange
             var userInfo = new UserInfo
@@ -254,11 +244,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
 
             // act
-            _usersRepository.SetUserInfo(User.InvalidId, userInfo);
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.SetUserInfo(User.InvalidId, userInfo));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SetInfoForDefaultUser()
+        public void Should_ThrowArgumentException_When_SetInfoForDefaultUser()
         {
             // arrange
             var userInfo = new UserInfo
@@ -269,12 +259,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 Avatar = Encoding.UTF8.GetBytes("testAvatar")
             };
 
-            // act
-            _usersRepository.SetUserInfo(0, userInfo);
-            var defaultUser = _usersRepository.GetUser(0);
-
-            // assert
-            Assert.IsNull(defaultUser.UserInfo);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.SetUserInfo(0, userInfo));
         }
 
         [TestMethod]
@@ -293,9 +279,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 FirstName = "Asen"
             };
 
-            var user = new User {Username = "testuser6", Hash = "x"};
+            var userCred = new UserCredentials{Username = "testuser6", Password = "x"};
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
             _usersRepository.SetUserInfo(user.Id, userInfo1);
             var returnedInfo1 = _usersRepository.GetUserInfo(user.Id);
@@ -309,14 +295,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.AreEqual(userInfo2.FirstName, returnedInfo2.FirstName);
             Assert.IsNull(returnedInfo2.Email);
             Assert.IsNull(returnedInfo2.Avatar);
-            Assert.AreEqual(userInfo2.DateOfBirth.Date, returnedInfo2.DateOfBirth);
+            Assert.AreEqual(userInfo2.DateOfBirth?.Date, returnedInfo2.DateOfBirth);
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_DeleteInfoForInvalidUser()
+        public void Should_ThrowArgumentException_When_DeleteInfoForInvalidUser()
         {
-            // act
-            _usersRepository.DeleteUserInfo(User.InvalidId);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.DeleteUserInfo(User.InvalidId));
         }
 
         [TestMethod]
@@ -324,9 +310,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         {
             // arrange
             const string userName = "d32f123";
-            var user = new User {Username = userName, Hash = "asd"};
+            var userCred = new UserCredentials{Username = userName, Password = "asd"};
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
             var retUser = _usersRepository.GetUserByUsername(user.Username);
             // assert
@@ -355,10 +341,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void ShouldStartChatWithUser()
         {
             //arrange
-            var user = new User
+            var user = new UserCredentials
             {
                 Username = "TODO:ASD",
-                Hash = "x"
+                Password = "x"
             };
 
             const string chatName = "tempChat";
@@ -368,7 +354,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var usersRepository = new UsersRepository(ConnectionString, chatsRepository);
             chatsRepository.UsersRepository = usersRepository;
 
-            var result = usersRepository.CreateUser(user.Username, user.Hash);
+            var result = usersRepository.CreateUser(user.Username, user.Password);
 
             _tempUsers.Add(result.Id);
 
@@ -389,126 +375,92 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ChangePasswordForUser()
         {
             // arrange
-            var user = new User { Username = "testuser6", Hash = "x" };
+            var userCred = new UserCredentials{ Username = "testuser6", Password = "x" };
             const string newPassword = "newPassword";
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
 
             _usersRepository.SetPassword(user.Id, newPassword);
-            user = _usersRepository.GetUser(user.Id);
-
             // assert
-            Assert.AreEqual(user.Hash, newPassword);
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_ChangePasswordForInvalidUser()
+        public void Should_ThrowArgumentException_When_ChangePasswordForInvalidUser()
         {
-            // act
-            _usersRepository.SetPassword(User.InvalidId, "asd");
-            var user = _usersRepository.GetUser(User.InvalidId);
-            // assert
-            Assert.IsNull(user);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.SetPassword(User.InvalidId, "asd"));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_ChangePasswordForDefaultUser()
+        public void Should_ThrowArgumentException_When_ChangePasswordForDefaultUser()
         {
             // arrange
-            var defaultUser = _usersRepository.GetUser(0);
             const string newPassword = "asd";
-
             // act
-            _usersRepository.SetPassword(0, newPassword);
-            var user = _usersRepository.GetUser(0);
-
             // assert
-            Assert.AreEqual(user.Hash, defaultUser.Hash);
-        }
-
-        [TestMethod]
-        public void Should_PersistUser_When_PersistNewUser()
-        {
-            // arrange
-            var user = new User {Username = "testuser7", Hash = "asd"};
-            var userInfo = new UserInfo {Email = "test@gmail.com"};
-            user.UserInfo = userInfo;
-
-            // act
-            var persistedUser = _usersRepository.PersistUser(user);
-            _tempUsers.Add(persistedUser.Id);
-            // assert
-            Assert.AreEqual(persistedUser.Username, user.Username);
-            Assert.AreEqual(persistedUser.Hash, user.Hash);
-            Assert.AreEqual(userInfo.Email, persistedUser.UserInfo.Email);
-            Assert.IsNull(persistedUser.UserInfo.Avatar);
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.SetPassword(0, newPassword));
         }
 
         [TestMethod]
         public void Should_PersistUser_When_PersistExistingUser()
         {
             // arrange
-            var user = new User { Username = "testuser8", Hash = "asd" };
+            var userCred = new UserCredentials{ Username = "testuser8", Password = "asd" };
             var userInfo = new UserInfo { Email = "test@gmail.com" };
             const string newUsername = "newUsername";
-            const string newPassword = "newPassword";
             const string newEmail = "newEmail@gmail.com";
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
             _usersRepository.SetUserInfo(user.Id, userInfo);
             user = _usersRepository.GetUser(user.Id);
 
             user.Username = newUsername;
-            user.Hash = newPassword;
             user.UserInfo.Email = newEmail;
             var persistedUser = _usersRepository.PersistUser(user);
 
             // assert
             Assert.AreEqual(persistedUser.Id, user.Id);
             Assert.AreEqual(persistedUser.Username, newUsername);
-            Assert.AreEqual(persistedUser.Hash, newPassword);
             Assert.AreEqual(persistedUser.UserInfo.Email, newEmail);
             Assert.IsNull(persistedUser.UserInfo.Avatar);
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_PersistDefaultUser()
+        public void Should_ThrowArgumentException_When_PersistDefaultUser()
         {
             // arrange
-            var user = new User { Id = 0, Username = "testuser9", Hash = "asd" };
+            var user = new User{ Id = 0, Username = "testuser9" };
             var userInfo = new UserInfo { Email = "test@gmail.com" };
             user.UserInfo = userInfo;
-
-            // act
-            var persistedUser = _usersRepository.PersistUser(user);
             // assert
-            Assert.IsNull(persistedUser);
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.PersistUser(user));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_PersistNewUserWithExistingUsername()
+        public void Should_ThrowUserAlreadyExistsException_When_PersistNewUserWithExistingUsername()
         {
             // arrange
-            var user = new User { Username = "testuser10", Hash = "asd" };
-
+            var userCred = new UserCredentials{ Username = "testuser10", Password = "asd" };
+            var user2Cred = new UserCredentials {Username = "someotherusername", Password = "asdf"};
             // act
-            var existingUser = _usersRepository.CreateUser(user.Username, "somePassword");
+            var existingUser = _usersRepository.CreateUser(userCred.Username, "somePassword");
+            var tempUser = _usersRepository.CreateUser(user2Cred.Username, user2Cred.Password);
             _tempUsers.Add(existingUser.Id);
-
-            var persistedUser = _usersRepository.PersistUser(user);
+            _tempUsers.Add(tempUser.Id);
+            tempUser.Username = existingUser.Username;
             // assert
-            Assert.IsNull(persistedUser);
+            Assert.ThrowsException<UserAlreadyExistsException>(() =>_usersRepository.PersistUser(tempUser));
         }
 
         [TestMethod]
         public void Should_ReturnUserChats()
         {
             // arrange
-            var user = new User {Username = "hey world", Hash = "asd"};
+            var userCred = new UserCredentials{Username = "hey world", Password = "asd"};
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chats = new List<Chat> {
                 _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat"),
                 _chatsRepository.CreateGroupChat(new[] { user.Id }, "ok") 
@@ -533,13 +485,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnChatSpecificInfoForUser()
         {
             // arrange
-            var listenerUser = new User { Username = "testuser76", Hash = "asd" };
-            var regularUser = new User { Username = "testuser77", Hash = "asd" };
+            var listenerUserCred = new UserCredentials{ Username = "testuser76", Password = "asd" };
+            var regularUserCred = new UserCredentials{ Username = "testuser77", Password = "asd" };
 
             // act
 
-            listenerUser = _usersRepository.CreateUser(listenerUser.Username, listenerUser.Hash);
-            regularUser = _usersRepository.CreateUser(regularUser.Username, regularUser.Hash);
+            var listenerUser = _usersRepository.CreateUser(listenerUserCred.Username, listenerUserCred.Password);
+            var regularUser = _usersRepository.CreateUser(regularUserCred.Username, regularUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
 
             _tempUsers.Add(listenerUser.Id);

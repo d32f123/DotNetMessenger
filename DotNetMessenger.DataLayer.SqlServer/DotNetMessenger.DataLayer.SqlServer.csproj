@@ -30,6 +30,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Microsoft.AspNet.Identity.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.2.1\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
@@ -41,6 +44,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exceptions\ChatExceptions.cs" />
+    <Compile Include="Exceptions\UserExceptions.cs" />
     <Compile Include="ModelProxies\ChatSqlProxy.cs" />
     <Compile Include="ChatsRepository.cs" />
     <Compile Include="ModelProxies\MessageSqlProxy.cs" />
@@ -60,6 +65,9 @@
       <Project>{79aefa90-761c-4eab-94f0-3e3dee808b7f}</Project>
       <Name>DotNetMessenger.Model</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

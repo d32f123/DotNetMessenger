@@ -8,12 +8,12 @@ namespace DotNetMessenger.Model
         public string FirstName { get; set; }
         public string Phone { get; set; }
         public string Email { get; set; }
-        public DateTime DateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
         public byte[] Avatar { get; set; }
 
         public UserInfo()
         {
-            DateOfBirth = DateTime.Now;
+            DateOfBirth = null;
         }
     }
 }

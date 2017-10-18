@@ -26,7 +26,7 @@
         private static UsersRepository _usersRepository;
         private static MessagesRepository _messagesRepository;
 
-        public static ChatsRepository ChatsRepository
+        public static IChatsRepository ChatsRepository
         {
             get
             {
@@ -41,7 +41,7 @@
             }
         }
 
-        public static UsersRepository UsersRepository
+        public static IUsersRepository UsersRepository
         {
             get
             {
@@ -56,9 +56,8 @@
             }
         }
 
-        public static MessagesRepository MessagesRepository
-        {
-            get { return _messagesRepository ?? (_messagesRepository = new MessagesRepository(_connectionString)); }
-        }
+        public static IMessagesRepository MessagesRepository =>
+            _messagesRepository ?? (_messagesRepository = new MessagesRepository(_connectionString));
+
     }
 }

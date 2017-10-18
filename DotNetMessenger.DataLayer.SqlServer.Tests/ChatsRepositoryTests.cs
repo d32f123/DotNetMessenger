@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
+using DotNetMessenger.WebApi.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DotNetMessenger.DataLayer.SqlServer.Tests
@@ -32,14 +34,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_CreateGroupChat_When_ExistingUsers()
         {
             // arrange
-            var users = new List<User> 
+            var usersCred = new List<UserCredentials> 
             {
-                new UserSqlProxy { Username = "testuser13", Hash = "asd" },
-                new UserSqlProxy { Username = "testuser14", Hash = "asd" },
-                new UserSqlProxy {Username = "testuser15", Hash = "asd"}
+                new UserCredentials { Username = "testuser13", Password = "asd" },
+                new UserCredentials { Username = "testuser14", Password = "asd" },
+                new UserCredentials {Username = "testuser15", Password = "asd"}
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -52,49 +54,44 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
         [TestMethod]
-        public void Should_NotCreateChat_When_InvalidUsers()
+        public void Should_ThrowArgumentException_When_InvalidUsers()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new UserSqlProxy { Username = "testuser16", Hash = "asd" },
-                new UserSqlProxy { Username = "testuser17", Hash = "asd" },
+                new UserCredentials { Username = "testuser16", Password = "asd" },
+                new UserCredentials { Username = "testuser17", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
-            users.Insert(0, new User {Id = User.InvalidId, Username = "testuser18", Hash = "asd"});
-            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            users.Insert(0, new User {Id = User.InvalidId, Username = "testuser18"});
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat"));
 
-            users.ForEach(x => _tempUsers.Add(x.Id));
-
-            // assert
-            Assert.IsNull(chat);
+            users.GetRange(0, 2).ForEach(x => _tempUsers.Add(x.Id));
         }
 
         [TestMethod]
-        public void Should_NotCreateChat_When_DefaultUser()
+        public void Should_ThrowArgumentException_When_DefaultUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new UserSqlProxy { Username = "testuser18", Hash = "asd" },
-                new UserSqlProxy { Username = "testuser19", Hash = "asd" },
+                new UserCredentials { Username = "testuser18", Password = "asd" },
+                new UserCredentials { Username = "testuser19", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
-            users.Insert(0, new UserSqlProxy { Id = 0, Username = "testuser18", Hash = "asd" });
-            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            users.ForEach((x) => _tempUsers.Add(x.Id));
+            users.Insert(0, new User { Id = 0, Username = "testuser18"});
+            Assert.ThrowsException<ArgumentException>(() =>_chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat"));
 
-            users.ForEach(x => _tempUsers.Add(x.Id));
+            
 
-            // assert
-            Assert.IsNull(chat);
         }
 
         [TestMethod]
@@ -128,13 +125,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_CreateDialogChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser20", Hash = "asd" },
-                new User { Username = "testuser21", Hash = "asd" },
+                new UserCredentials { Username = "testuser20", Password = "asd" },
+                new UserCredentials { Username = "testuser21", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -144,8 +141,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -153,14 +149,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_AddUserToChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
-                new User {Username = "testuser24", Hash = "asd"}
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
+                new UserCredentials {Username = "testuser24", Password = "asd"}
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.GetRange(0, 2).Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -177,8 +173,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -186,13 +181,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotAddUserToChat_When_InvalidUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -209,8 +204,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -218,13 +212,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotAddUserToChat_When_DefaultUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -241,8 +235,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -250,14 +243,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotAddUserToChat_When_Dialogue()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
-                new User {Username = "testuser24", Hash = "asd"}
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
+                new UserCredentials {Username = "testuser24", Password = "asd"}
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -272,8 +265,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -281,14 +273,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_AddUsersToChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
-                new User {Username = "testuser24", Hash = "asd"}
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
+                new UserCredentials {Username = "testuser24", Password = "asd"}
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.GetRange(0, 2).Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -305,8 +297,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -314,13 +305,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotAddUsersToChat_When_ContainsInvalidUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -337,8 +328,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -346,13 +336,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotAddUsersToChat_When_ContainsDefaultUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -369,8 +359,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -378,14 +367,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotAddUsersToChat_When_ChatIsDialogue()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser22", Hash = "asd" },
-                new User { Username = "testuser23", Hash = "asd" },
-                new User {Username = "testuser24", Hash = "asd"}
+                new UserCredentials { Username = "testuser22", Password = "asd" },
+                new UserCredentials { Username = "testuser23", Password = "asd" },
+                new UserCredentials {Username = "testuser24", Password = "asd"}
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -400,8 +389,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i].Id);
-                Assert.IsTrue(user.Hash == users[i++].Hash);
+                Assert.IsTrue(user.Id == users[i++].Id);
             }
         }
 
@@ -409,13 +397,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DeleteChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser25", Hash = "asd" },
-                new User { Username = "testuser26", Hash = "asd" },
+                new UserCredentials { Username = "testuser25", Password = "asd" },
+                new UserCredentials { Username = "testuser26", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -442,14 +430,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetAndGetChatInfo()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser27", Hash = "asd" },
-                new User { Username = "testuser28", Hash = "asd" },
+                new UserCredentials { Username = "testuser27", Password = "asd" },
+                new UserCredentials { Username = "testuser28", Password = "asd" },
             };
             var chatInfo = new ChatInfo {Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar")};
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -475,14 +463,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DeleteChatInfo()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser29", Hash = "asd" },
-                new User { Username = "testuser30", Hash = "asd" },
+                new UserCredentials { Username = "testuser29", Password = "asd" },
+                new UserCredentials { Username = "testuser30", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -498,14 +486,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_NoInfoOnDeleteChatInfo()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser31", Hash = "asd" },
-                new User { Username = "testuser32", Hash = "asd" },
+                new UserCredentials { Username = "testuser31", Password = "asd" },
+                new UserCredentials { Username = "testuser32", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -536,15 +524,15 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetChatInfo_When_InfoIsDeleted()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser33", Hash = "asd" },
-                new User { Username = "testuser34", Hash = "asd" },
+                new UserCredentials { Username = "testuser33", Password = "asd" },
+                new UserCredentials { Username = "testuser34", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
             var newChatInfo = new ChatInfo { Title = "newTitle", Avatar = Encoding.UTF8.GetBytes("ava") };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -562,14 +550,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_InfoIsNull()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser35", Hash = "asd" },
-                new User { Username = "testuser36", Hash = "asd" },
+                new UserCredentials { Username = "testuser35", Password = "asd" },
+                new UserCredentials { Username = "testuser36", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -586,14 +574,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetInfo_When_InfoMembersAreNull()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser37", Hash = "asd" },
-                new User { Username = "testuser38", Hash = "asd" },
+                new UserCredentials { Username = "testuser37", Password = "asd" },
+                new UserCredentials { Username = "testuser38", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = null, Avatar = null };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -609,14 +597,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetInfo_When_InfoMembersAreEmpty()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser39", Hash = "asd" },
-                new User { Username = "testuser40", Hash = "asd" },
+                new UserCredentials { Username = "testuser39", Password = "asd" },
+                new UserCredentials { Username = "testuser40", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = "", Avatar = Encoding.UTF8.GetBytes("") };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -632,14 +620,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetInfoForDialog()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser41", Hash = "asd" },
-                new User { Username = "testuser42", Hash = "asd" },
+                new UserCredentials { Username = "testuser41", Password = "asd" },
+                new UserCredentials { Username = "testuser42", Password = "asd" },
             };
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -655,13 +643,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetCreator()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser43", Hash = "asd" },
-                new User { Username = "testuser44", Hash = "asd" },
+                new UserCredentials { Username = "testuser43", Password = "asd" },
+                new UserCredentials { Username = "testuser44", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -676,13 +664,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_CreatorIsInvalid()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser45", Hash = "asd" },
-                new User { Username = "testuser46", Hash = "asd" },
+                new UserCredentials { Username = "testuser45", Password = "asd" },
+                new UserCredentials { Username = "testuser46", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -697,16 +685,16 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_NewCreatorIsNotInChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser47", Hash = "asd" },
-                new User { Username = "testuser48", Hash = "asd" },
+                new UserCredentials { Username = "testuser47", Password = "asd" },
+                new UserCredentials { Username = "testuser48", Password = "asd" },
             };
 
-            var otherUser = new User() {Username = "John", Hash = "asdh"};
+            var otherUserCred = new UserCredentials() {Username = "John", Password = "asdh"};
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
-            otherUser = _usersRepository.CreateUser(otherUser.Username, otherUser.Hash);
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            var otherUser = _usersRepository.CreateUser(otherUserCred.Username, otherUserCred.Password);
 
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
@@ -723,13 +711,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_CreatorIsDefault()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser49", Hash = "asd" },
-                new User { Username = "testuser50", Hash = "asd" },
+                new UserCredentials { Username = "testuser49", Password = "asd" },
+                new UserCredentials { Username = "testuser50", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
 
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
@@ -745,10 +733,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_SetCreatorForInvalidChat()
         {
             // arrange
-            var user = new User { Username = "testuser51", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser51", Password = "asd" };
 
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
 
             _chatsRepository.SetCreator(Chat.InvalidId, user.Id);
@@ -761,13 +749,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_SetCreatorForDialog()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser52", Hash = "asd" },
-                new User { Username = "testuser53", Hash = "asd" },
+                new UserCredentials { Username = "testuser52", Password = "asd" },
+                new UserCredentials { Username = "testuser53", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -782,13 +770,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_KickUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser54", Hash = "asd" },
-                new User { Username = "testuser55", Hash = "asd" },
+                new UserCredentials { Username = "testuser54", Password = "asd" },
+                new UserCredentials { Username = "testuser55", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
             var chatCount = chat.Users.Count();
 
@@ -804,15 +792,15 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickUserNotInChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser56", Hash = "asd" },
-                new User { Username = "testuser57", Hash = "asd" },
+                new UserCredentials { Username = "testuser56", Password = "asd" },
+                new UserCredentials { Username = "testuser57", Password = "asd" },
             };
-            var otherUser = new User {Username = "testuser58", Hash = "asd"};
+            var otherUserCred = new UserCredentials {Username = "testuser58", Password = "asd"};
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
-            otherUser = _usersRepository.CreateUser(otherUser.Username, otherUser.Hash);
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            var otherUser = _usersRepository.CreateUser(otherUserCred.Username, otherUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -833,13 +821,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickDefaultUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser59", Hash = "asd" },
-                new User { Username = "testuser60", Hash = "asd" },
+                new UserCredentials { Username = "testuser59", Password = "asd" },
+                new UserCredentials { Username = "testuser60", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -859,10 +847,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickFromInvalidChat()
         {
             // arrange 
-            var user = new User {Username = "testuser61", Hash = "asd"};
+            var userCred = new UserCredentials {Username = "testuser61", Password = "asd"};
 
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
 
             _chatsRepository.KickUser(Chat.InvalidId, user.Id);
@@ -876,13 +864,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickFromDialog()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser62", Hash = "asd" },
-                new User { Username = "testuser63", Hash = "asd" },
+                new UserCredentials { Username = "testuser62", Password = "asd" },
+                new UserCredentials { Username = "testuser63", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -902,13 +890,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickCreator()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser64", Hash = "asd" },
-                new User { Username = "testuser65", Hash = "asd" },
+                new UserCredentials { Username = "testuser64", Password = "asd" },
+                new UserCredentials { Username = "testuser65", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -928,13 +916,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_KickUsers()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser66", Hash = "asd" },
-                new User { Username = "testuser67", Hash = "asd" },
+                new UserCredentials { Username = "testuser66", Password = "asd" },
+                new UserCredentials { Username = "testuser67", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
             var chatCount = chat.Users.Count();
 
@@ -950,13 +938,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickContainsCreator()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser64", Hash = "asd" },
-                new User { Username = "testuser65", Hash = "asd" },
+                new UserCredentials { Username = "testuser64", Password = "asd" },
+                new UserCredentials { Username = "testuser65", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -976,13 +964,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickUsersFromDialog()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser68", Hash = "asd" },
-                new User { Username = "testuser69", Hash = "asd" },
+                new UserCredentials { Username = "testuser68", Password = "asd" },
+                new UserCredentials { Username = "testuser69", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -1002,15 +990,15 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickContainsUserNotInChat()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser70", Hash = "asd" },
-                new User { Username = "testuser71", Hash = "asd" },
+                new UserCredentials { Username = "testuser70", Password = "asd" },
+                new UserCredentials { Username = "testuser71", Password = "asd" },
             };
-            var otherUser = new User { Username = "testuser72", Hash = "asd" };
+            var otherUserCred = new UserCredentials { Username = "testuser72", Password = "asd" };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
-            otherUser = _usersRepository.CreateUser(otherUser.Username, otherUser.Hash);
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            var otherUser = _usersRepository.CreateUser(otherUserCred.Username, otherUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -1031,13 +1019,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KickContainsDefaultUser()
         {
             // arrange
-            var users = new List<User>
+            var usersCred = new List<UserCredentials>
             {
-                new User { Username = "testuser73", Hash = "asd" },
-                new User { Username = "testuser74", Hash = "asd" },
+                new UserCredentials { Username = "testuser73", Password = "asd" },
+                new UserCredentials { Username = "testuser74", Password = "asd" },
             };
             // act
-            users = users.Select(x => _usersRepository.CreateUser(x.Username, x.Hash)).ToList();
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
@@ -1057,10 +1045,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KicksFromInvalidChat()
         {
             // arrange 
-            var user = new User { Username = "testuser75", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser75", Password = "asd" };
 
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
 
             _chatsRepository.KickUsers(Chat.InvalidId, new[] {user.Id});
@@ -1074,10 +1062,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_KicksIsNull()
         {
             // arrange 
-            var user = new User { Username = "testuser75", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser75", Password = "asd" };
 
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
             var chat = _chatsRepository.CreateGroupChat(new[] {user.Id}, "hey");
 
@@ -1092,13 +1080,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetRole_When_SetRoleForChat()
         {
             // arrange
-            var listenerUser = new User { Username = "testuser76", Hash = "asd" };
-            var regularUser = new User { Username = "testuser77", Hash = "asd" };
+            var listenerUserCred = new UserCredentials { Username = "testuser76", Password = "asd" };
+            var regularUserCred = new UserCredentials { Username = "testuser77", Password = "asd" };
 
             // act
 
-            listenerUser = _usersRepository.CreateUser(listenerUser.Username, listenerUser.Hash);
-            regularUser = _usersRepository.CreateUser(regularUser.Username, regularUser.Hash);
+            var listenerUser = _usersRepository.CreateUser(listenerUserCred.Username, listenerUserCred.Password);
+            var regularUser = _usersRepository.CreateUser(regularUserCred.Username, regularUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
             
             _tempUsers.Add(listenerUser.Id);
@@ -1120,13 +1108,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetRoleForUserNotInChat()
         {
             // arrange
-            var user = new User { Username = "testuser78", Hash = "asd" };
-            var notChatUser = new User { Username = "testuser79", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser78", Password = "asd" };
+            var notChatUserCred = new UserCredentials { Username = "testuser79", Password = "asd" };
 
             // act
 
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
-            notChatUser = _usersRepository.CreateUser(notChatUser.Username, notChatUser.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
+            var notChatUser = _usersRepository.CreateUser(notChatUserCred.Username, notChatUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1144,13 +1132,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetChatSpecificRoleForDefaultUser()
         {
             // arrange
-            var listenerUser = new User { Username = "testuser76", Hash = "asd" };
-            var regularUser = new User { Username = "testuser77", Hash = "asd" };
+            var listenerUserCred = new UserCredentials { Username = "testuser76", Password = "asd" };
+            var regularUserCred = new UserCredentials { Username = "testuser77", Password = "asd" };
 
             // act
 
-            listenerUser = _usersRepository.CreateUser(listenerUser.Username, listenerUser.Hash);
-            regularUser = _usersRepository.CreateUser(regularUser.Username, regularUser.Hash);
+            var listenerUser = _usersRepository.CreateUser(listenerUserCred.Username, listenerUserCred.Password);
+            var regularUser = _usersRepository.CreateUser(regularUserCred.Username, regularUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
 
             _tempUsers.Add(listenerUser.Id);
@@ -1166,10 +1154,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetRoleForInvalidChat()
         {
             // arrange
-            var user = new User { Username = "testuser80", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser80", Password = "asd" };
 
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
             _chatsRepository.SetChatSpecificRole(user.Id, Chat.InvalidId, UserRoles.Moderator);
             var role = _chatsRepository.GetChatSpecificInfo(user.Id, Chat.InvalidId)?.Role;
@@ -1182,10 +1170,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNewRole_When_UpdateCurrentRole()
         {
             // arrange
-            var regularUser = new User { Username = "testuser81", Hash = "asd" };
+            var regularUserCred = new UserCredentials { Username = "testuser81", Password = "asd" };
 
             // act
-            regularUser = _usersRepository.CreateUser(regularUser.Username, regularUser.Hash);
+            var regularUser = _usersRepository.CreateUser(regularUserCred.Username, regularUserCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id }, "newChat");
             _tempUsers.Add(regularUser.Id);
             _tempChats.Add(chat.Id);
@@ -1204,10 +1192,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_DoNothing_When_DeleteChatSpecificInfoForDefaultUser()
         {
             // arrange
-            var user = new User {Username = "asdajklsd", Hash = "asd"};
+            var userCred = new UserCredentials {Username = "asdajklsd", Password = "asd"};
 
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new [] {user.Id}, "newChat");
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
@@ -1224,10 +1212,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_SetNewUserChatInfo()
         {
             // arrange
-            var user = new User {Username = "testuser82", Hash = "asd"};
+            var userCred = new UserCredentials {Username = "testuser82", Password = "asd"};
             var userInfo = new ChatUserInfo {Nickname = "alfred", Role = new UserRole {RoleType = UserRoles.Trusted}};
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1245,10 +1233,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_NotChangeRole_When_SetNewChatInfoWithoutRole()
         {
             // arrange
-            var user = new User { Username = "testuser83", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser83", Password = "asd" };
             var userInfo = new ChatUserInfo { Nickname = "alfred", Role = new UserRole { RoleType = UserRoles.Trusted } };
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1267,12 +1255,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetInfoForUserNotInChat()
         {
             // arrange
-            var user = new User { Username = "testuser84", Hash = "asd" };
-            var other = new User {Username = "testuser85", Hash = "ok"};
+            var userCred = new UserCredentials { Username = "testuser84", Password = "asd" };
+            var otherCred = new UserCredentials {Username = "testuser85", Password = "ok"};
             var userInfo = new ChatUserInfo { Nickname = "alfred", Role = new UserRole { RoleType = UserRoles.Trusted } };
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
-            other = _usersRepository.CreateUser(other.Username, other.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
+            var other = _usersRepository.CreateUser(otherCred.Username, otherCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1290,10 +1278,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetInfoForDefaultUserInChat()
         {
             // arrange
-            var user = new User { Username = "testuser84", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser84", Password = "asd" };
             var userInfo = new ChatUserInfo { Nickname = "alfred", Role = new UserRole { RoleType = UserRoles.Trusted } };
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1310,10 +1298,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNewInfo_When_SetChatUserInfoAfterDelete()
         {
             // arrange
-            var user = new User { Username = "testuser82", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser82", Password = "asd" };
             var userInfo = new ChatUserInfo { Nickname = "alfred", Role = new UserRole { RoleType = UserRoles.Trusted } };
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1332,9 +1320,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetChatUserInfoIsNull()
         {
             // arrange
-            var user = new User { Username = "testuser82", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser82", Password = "asd" };
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);
@@ -1352,10 +1340,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_ReturnNull_When_SetChatUserInfoRoleIsNullAndSetRole()
         {
             // arrange
-            var user = new User { Username = "testuser82", Hash = "asd" };
+            var userCred = new UserCredentials { Username = "testuser82", Password = "asd" };
             var chatUserInfo = new ChatUserInfo {Nickname = "asd", Role = null};
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             var chat = _chatsRepository.CreateGroupChat(new[] { user.Id }, "newChat");
 
             _tempUsers.Add(user.Id);

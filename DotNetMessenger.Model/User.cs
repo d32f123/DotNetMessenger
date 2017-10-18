@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace DotNetMessenger.Model
 {
+    /// <inheritdoc />
     /// <summary>
     /// Class represents a single user entity
     /// </summary>
@@ -16,7 +17,6 @@ namespace DotNetMessenger.Model
         /// </summary>
         public int Id { get; set; }
         public string Username { get; set; }
-        public string Hash { get; set; }
 
         /// <summary>
         /// Information regarding last name, first name, email, et c.
@@ -49,12 +49,10 @@ namespace DotNetMessenger.Model
                 return 1;
             if (string.Compare(Username, other.Username, StringComparison.Ordinal) != 0)
                 return string.Compare(Username, other.Username, StringComparison.Ordinal);
-            if (string.Compare(Hash, other.Hash, StringComparison.Ordinal) != 0)
-                return string.Compare(Hash, other.Hash, StringComparison.Ordinal);
             return 0;
         }
 
-        public override bool Equals(Object obj)
+        public override bool Equals(object obj)
         {
             var other = obj as User;
             if (this == other)
@@ -66,8 +64,6 @@ namespace DotNetMessenger.Model
             if (Id != other.Id)
                 return false;
             if (string.Compare(Username, other.Username, StringComparison.Ordinal) != 0)
-                return false;
-            if (string.Compare(Hash, other.Hash, StringComparison.Ordinal) != 0)
                 return false;
             return true;
         }

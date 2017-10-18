@@ -5,12 +5,12 @@ namespace DotNetMessenger.DataLayer
     public interface IUsersRepository
     {
         /// <summary>
-        /// Creates a user in DB given their <paramref name="userName"/> and <paramref name="hash"/>
+        /// Creates a user in DB given their <paramref name="userName"/> and <paramref name="password"/>
         /// </summary>
         /// <param name="userName">The username of the new user</param>
-        /// <param name="hash">Hash of the password of the new user</param>
+        /// <param name="password">Hash of the password of the new user</param>
         /// <returns>Null if username already exists, else object representing a newly created user</returns>
-        User CreateUser(string userName, string hash);
+        User CreateUser(string userName, string password);
         /// <summary>
         /// Deletes a user from DB
         /// </summary>
@@ -46,8 +46,8 @@ namespace DotNetMessenger.DataLayer
         /// Sets a new password for the user
         /// </summary>
         /// <param name="userId">The id of the user</param>
-        /// <param name="newHash">The new hash</param>
-        void SetPassword(int userId, string newHash);
+        /// <param name="newPassword">The new hash</param>
+        void SetPassword(int userId, string newPassword);
 
         /// <summary>
         /// Sets info for a given user

@@ -130,9 +130,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         {
             // arrange
             const string text = "Some text right here alright";
-            var user = new User {Username = "joshua", Hash = "asd"};
             // act
-            user = _usersRepository.CreateUser(user.Username, user.Hash);
+            var user = _usersRepository.CreateUser("joshua", "asd");
             _tempUsers.Add(user.Id);
 
             var msg = _messagesRepository.StoreMessage(user.Id, _chatId, text);

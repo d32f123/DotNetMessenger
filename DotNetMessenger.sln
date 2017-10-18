@@ -24,6 +24,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.DataLayer.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.DataLayer.SqlServer.Tests", "DotNetMessenger.DataLayer.SqlServer.Tests\DotNetMessenger.DataLayer.SqlServer.Tests.csproj", "{489D5A17-8CEF-493F-A3FD-42B844A8339E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WebApi", "DotNetMessenger.WebApi\DotNetMessenger.WebApi.csproj", "{011D0245-1599-4A3E-8D93-F2595A4AD615}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -46,6 +48,10 @@ Global
 		{489D5A17-8CEF-493F-A3FD-42B844A8339E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{489D5A17-8CEF-493F-A3FD-42B844A8339E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{489D5A17-8CEF-493F-A3FD-42B844A8339E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
