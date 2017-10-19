@@ -17,15 +17,28 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             _connectionString = connectionString;
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Stores a <see cref="T:DotNetMessenger.Model.Message" /> by <paramref name="senderId" /> in <paramref name="chatId" />
+        /// </summary>
+        /// <param name="senderId">The id of the sender</param>
+        /// <param name="chatId">Chat id</param>
+        /// <param name="text">Text of the message</param>
+        /// <param name="attachments">Any attachments</param>
+        /// <returns><see cref="T:DotNetMessenger.Model.Message" /> object representing persisted message</returns>
+        /// <exception cref="ArgumentNullException">Throws if text and attachments are both null</exception>
+        /// <exception cref="ArgumentException">
+        ///     Throws if any of the ids are invalid or if 
+        ///     <paramref name="senderId"/> is not in <paramref name="chatId"/>
+        /// </exception>
         public Message StoreMessage(int senderId, int chatId, string text, IEnumerable<Attachment> attachments = null)
         {
             try
             {
                 if (string.IsNullOrEmpty(text) && attachments == null)
-                    return null;
+                    throw new ArgumentNullException();
                 if (senderId == 0)
-                    return null;
+                    throw new ArgumentException();
                 using (var scope = new TransactionScope())
                 {
                     using (var connection = new SqlConnection(_connectionString))
@@ -90,10 +103,25 @@ namespace DotNetMessenger.DataLayer.SqlServer
             }
             catch
             {
-                return null;
+                throw new ArgumentException();
             }
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Stores a <see cref="T:DotNetMessenger.Model.Message" /> by <paramref name="senderId" /> in <paramref name="chatId" />
+        /// that will be deleted after <paramref name="expirationDate" />
+        /// </summary>
+        /// <param name="senderId">The id of the sender</param>
+        /// <param name="chatId">Chat id</param>
+        /// <param name="text">Text of the message</param>
+        /// <param name="expirationDate">Expiration date of the message</param>
+        /// <param name="attachments">Any attachments</param>
+        /// <returns><see cref="T:DotNetMessenger.Model.Message" /> object representing persisted message</returns>
+        /// <exception cref="T:System.ArgumentNullException">Throws if text and attachments are both null</exception>
+        /// <exception cref="T:System.ArgumentException">
+        ///     Throws if any of the ids are invalid or if 
+        ///     <paramref name="senderId" /> is not in <paramref name="chatId" />
+        /// </exception>
         public Message StoreTemporaryMessage(int senderId, int chatId, string text, DateTime expirationDate,
             IEnumerable<Attachment> attachments = null)
         {
@@ -106,9 +134,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 {
                     connection.Open();
                     var message = (MessageSqlProxy)StoreMessage(senderId, chatId, text, attachments);
-
-                    if (message == null)
-                        return null;
                     // Insert expiration date into queue
                     using (var command = connection.CreateCommand())
                     {
@@ -126,7 +151,13 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Gets a message given its <paramref name="messageId" />.
+        /// Ret value can be null
+        /// </summary>
+        /// <param name="messageId">The id of the message</param>
+        /// <returns>Null if no object found, else <see cref="Message"/> object representing persisted message</returns>
         public Message GetMessage(int messageId)
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -156,13 +187,17 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
+        /// <summary>
+        /// Gets message attachments given its <paramref name="messageId"/>
+        /// </summary>
+        /// <param name="messageId">The id of the message</param>
+        /// <returns></returns>
         public IEnumerable<Attachment> GetMessageAttachments(int messageId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-
+                /* TODO: CHECK IF EXISTS, IF NO THROW EXCEPTION */
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT [ID], [Type], [AttachFile] FROM [Attachments] " +

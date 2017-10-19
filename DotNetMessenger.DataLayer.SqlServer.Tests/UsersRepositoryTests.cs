@@ -66,6 +66,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             //assert
             Assert.AreEqual(user.Username, result.Username);
+            Assert.AreEqual(user.Password, _usersRepository.GetPassword(result.Id));
         }
 
         [TestMethod]

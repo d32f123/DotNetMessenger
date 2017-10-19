@@ -23,8 +23,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             _connectionString = connectionString;
         }
-
-
         /// <inheritdoc />
         /// <summary>
         /// Create user given their username and password
@@ -85,7 +83,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Deletes user given their id
@@ -112,7 +109,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Returns a user given their id
@@ -142,7 +138,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Gets user by username
@@ -174,7 +169,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Deletes a user from the DB
@@ -198,7 +192,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         } 
-
         /// <inheritdoc />
         /// <summary>
         /// Returns user's info given their id
@@ -235,7 +228,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Sets user info given id and UserInfo object
@@ -342,7 +334,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 throw new ArgumentException(nameof(userId));
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Persists(updates) the user in the DB
@@ -390,7 +381,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 throw new UserAlreadyExistsException();
             }
         }
-
         /// <inheritdoc />
         /// <summary>
         /// Sets a new password for the user
@@ -422,6 +412,32 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.Parameters.AddWithValue("@password", newHash);
 
                     command.ExecuteNonQuery();
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Returns user's password hash
+        /// </summary>
+        /// <param name="userId">The id of the user</param>
+        /// <returns>The password hash</returns>
+        public string GetPassword(int userId)
+        {
+            if (userId == 0)
+                throw new ArgumentException();
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                if (!SqlHelper.DoesFieldValueExist(connection, "Users", "ID", userId, SqlDbType.Int))
+                    throw new ArgumentException();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT [Password] FROM [Users] WHERE [ID] = @userId";
+
+                    command.Parameters.AddWithValue("@userId", userId);
+
+                    return (string)command.ExecuteScalar();
                 }
             }
         }

@@ -34,8 +34,6 @@ namespace DotNetMessenger.DataLayer
         /// <param name="userId">The id of the user</param>
         /// <returns>Null on invalidId, else information of the user</returns>
         UserInfo GetUserInfo(int userId);
-
-        // Update data in DB according to the user
         /// <summary>
         /// Persists all changes in the <see cref="User"/> in DB
         /// </summary>
@@ -46,9 +44,14 @@ namespace DotNetMessenger.DataLayer
         /// Sets a new password for the user
         /// </summary>
         /// <param name="userId">The id of the user</param>
-        /// <param name="newPassword">The new hash</param>
+        /// <param name="newPassword">The new password</param>
         void SetPassword(int userId, string newPassword);
-
+        /// <summary>
+        /// Gets user's password hash
+        /// </summary>
+        /// <param name="userId">The id of the user</param>
+        /// <returns>The hash</returns>
+        string GetPassword(int userId);
         /// <summary>
         /// Sets info for a given user
         /// </summary>

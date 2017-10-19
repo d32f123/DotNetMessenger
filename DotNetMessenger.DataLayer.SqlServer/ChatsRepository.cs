@@ -314,11 +314,15 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
         /// <exception cref="ArgumentException">Throws if id is invalid</exception>
+        /// <exception cref="ArgumentNullException">Throws if no info exists</exception>
         public void DeleteChatInfo(int chatId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
+
+                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                    throw new ArgumentException();
 
                 using (var command = connection.CreateCommand())
                 {
@@ -327,7 +331,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.Parameters.AddWithValue("@chatId", chatId);
 
                     if (command.ExecuteNonQuery() == 0)
-                        throw new ArgumentException();
+                        throw new ArgumentNullException();
                 }
             }
             
@@ -617,13 +621,24 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <param name="userId">The id of the user</param>
         /// <param name="chatId">The id of the chat</param>
         /// <returns>Null if no info, else <see cref="T:DotNetMessenger.Model.ChatUserInfo" /> object</returns>
+        /// <exception cref="ArgumentException">Throws if userid is invalid or user is not in chat</exception>
+        /// <exception cref="ChatTypeMismatchException">Throws if chat is dialog</exception>
         public ChatUserInfo GetChatSpecificInfo(int userId, int chatId)
         {
             if (userId == 0)
-                return null;
+                throw new ArgumentException();
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
+                // check if the chat exists
+                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                    throw new ArgumentException();
+                // check if chat is dialog
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                    throw new ChatTypeMismatchException();
+                // check if user is in chat
+                if (!SqlHelper.DoesDoubleKeyExist(connection, "ChatUsers", "UserID", userId, "ChatID", chatId))
+                    throw new ArgumentException();
 
                 var chatUserInfo = new ChatUserInfo();
                 int roleId;
@@ -689,6 +704,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <exception cref="T:System.ArgumentNullException">Throws if <paramref name="userInfo" /> is null OR <paramref name="updateRole" /> 
         /// is true and <see cref="T:DotNetMessenger.Model.UserRole" /> is null</exception>
         /// <exception cref="T:System.ArgumentException">Throws if id is invalid</exception>
+        /// <exception cref="ChatTypeMismatchException">Throws if chat is dialog</exception>
         public void SetChatSpecificInfo(int userId, int chatId, ChatUserInfo userInfo, bool updateRole = false)
         {
             if (userInfo == null)
@@ -702,6 +718,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Open();
+
+                    // check if chat is dialog
+                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                        throw new ChatTypeMismatchException();
 
                     // is there an entry in the table already?
                     var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
@@ -753,6 +773,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <param name="userRole">The role to set</param>
         /// <returns><see cref="T:DotNetMessenger.Model.ChatUserInfo" /> object</returns>
         /// <exception cref="T:System.ArgumentException">Throws if id is invalid</exception>
+        /// <exception cref="ChatTypeMismatchException">Throws if chat is dialog</exception>
         public ChatUserInfo SetChatSpecificRole(int userId, int chatId, UserRoles userRole)
         {
             if (userId == 0)
@@ -762,6 +783,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 using (var connection = new SqlConnection(_connectionString))
                 {
                     connection.Open();
+
+                    // check if chat is dialog
+                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                        throw new ChatTypeMismatchException();
+
                     var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
                         "[ChatID]", chatId);
                     using (var command = connection.CreateCommand())
@@ -798,6 +824,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <param name="chatId">The id of the chat</param>
         /// <exception cref="T:System.ArgumentNullException">Throws if no data found about the user</exception>
         /// <exception cref="T:System.ArgumentException">Throws if any of the ids are invalid or if the user is not in chat</exception>
+        /// <exception cref="ChatTypeMismatchException">Throws if chat is dialog</exception>
         public void DeleteChatSpecificInfo(int userId, int chatId)
         {
             if (userId == 0)
@@ -806,6 +833,9 @@ namespace DotNetMessenger.DataLayer.SqlServer
             {
                 connection.Open();
 
+                // check if chat is dialog
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                    throw new ChatTypeMismatchException();
                 // check if user is in chat
                 if (!SqlHelper.DoesDoubleKeyExist(connection, "ChatUsers", "UserID", userId, "ChatID", chatId))
                     throw new ArgumentException();

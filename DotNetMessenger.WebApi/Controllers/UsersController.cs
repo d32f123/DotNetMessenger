@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
@@ -31,6 +33,32 @@ namespace DotNetMessenger.WebApi.Controllers
             if (user == null)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
             return user;
+        }
+
+        [Route("{id:int}/chats")]
+        [HttpGet]
+        public IEnumerable<Chat> GetUserChats(int id)
+        {
+            var chats = RepositoryBuilder.ChatsRepository.GetUserChats(id);
+            try
+            {
+                var userChats = chats as Chat[] ?? chats.ToArray();
+                return userChats;
+            }
+            catch (ArgumentException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
+            }
+        }
+
+        [Route("{username:length(6,50)}/chats")]
+        [HttpGet]
+        public IEnumerable<Chat> GetUserChatsByUsername(string username)
+        {
+            var user = RepositoryBuilder.UsersRepository.GetUserByUsername(username);
+            if (user == null)
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
+            return RepositoryBuilder.ChatsRepository.GetUserChats(user.Id);
         }
 
         [Route("")]

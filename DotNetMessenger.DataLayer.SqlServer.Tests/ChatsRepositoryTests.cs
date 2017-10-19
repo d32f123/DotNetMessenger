@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
+using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WebApi.Models;
@@ -19,7 +19,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         private readonly List<int> _tempUsers = new List<int>();
         private readonly List<int> _tempChats = new List<int>();
 
-        private IChatsRepository _chatsRepository;
+        private ChatsRepository _chatsRepository;
         private IUsersRepository _usersRepository;
 
         [TestInitialize]
@@ -27,7 +27,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         {
             RepositoryBuilder.ConnectionString = ConnectionString;
             _usersRepository = RepositoryBuilder.UsersRepository;
-            _chatsRepository = RepositoryBuilder.ChatsRepository;
+            _chatsRepository = (ChatsRepository)RepositoryBuilder.ChatsRepository;
         }
 
         [TestMethod]
@@ -69,10 +69,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            users.ForEach(x => _tempUsers.Add(x.Id));
             users.Insert(0, new User {Id = User.InvalidId, Username = "testuser18"});
+            // assert
             Assert.ThrowsException<ArgumentException>(() => _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat"));
-
-            users.GetRange(0, 2).ForEach(x => _tempUsers.Add(x.Id));
         }
 
         [TestMethod]
@@ -89,36 +89,27 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             users.ForEach((x) => _tempUsers.Add(x.Id));
             users.Insert(0, new User { Id = 0, Username = "testuser18"});
             Assert.ThrowsException<ArgumentException>(() =>_chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat"));
-
-            
-
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_GetUsersForInvalidChat()
+        public void Should_ThrowArgumentException_When_GetUsersForInvalidChat()
         {
             // act
-            var users = _chatsRepository.GetChatUsers(Chat.InvalidId);
-            // assert
-            Assert.IsTrue(!users.Any());
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.GetChatUsers(Chat.InvalidId).First());
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_GetChatsForInvalidUser()
+        public void Should_ThrowArgumentException_When_GetChatsForInvalidUser()
         {
-            // act
-            var chats = _chatsRepository.GetUserChats(User.InvalidId);
-            // assert
-            Assert.IsFalse(chats.Any());
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.GetUserChats(User.InvalidId).First());
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_GetChatsForDefaultUser()
+        public void Should_ThrowArgumentException_When_GetChatsForDefaultUser()
         {
-            // act
-            var chats = _chatsRepository.GetUserChats(0);
-            // assert
-            Assert.IsFalse(chats.Any());
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.GetUserChats(0).First());
         }
 
         [TestMethod]
@@ -178,7 +169,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_NotAddUserToChat_When_InvalidUser()
+        public void Should_ThrowArgumentException_When_AddInvalidUserToChat()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -194,22 +185,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             // add user
-            _chatsRepository.AddUser(chat.Id, User.InvalidId);
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.AreEqual(chat.Info.Title, "newChat");
-            Assert.AreEqual(chat.CreatorId, users[0].Id);
-            Assert.AreEqual(chat.Users.Count(), 2);
-            var i = 0;
-            foreach (var user in chat.Users)
-            {
-                Assert.IsTrue(user.Id == users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.AddUser(chat.Id, User.InvalidId));
         }
 
         [TestMethod]
-        public void Should_NotAddUserToChat_When_DefaultUser()
+        public void Should_ThrowArgumentException_When_AddDefaultUserToChat()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -225,22 +205,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             // add user
-            _chatsRepository.AddUser(chat.Id, 0);
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.AreEqual(chat.Info.Title, "newChat");
-            Assert.AreEqual(chat.CreatorId, users[0].Id);
-            Assert.AreEqual(chat.Users.Count(), 2);
-            var i = 0;
-            foreach (var user in chat.Users)
-            {
-                Assert.IsTrue(user.Id == users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.AddUser(chat.Id, 0));
         }
 
         [TestMethod]
-        public void Should_NotAddUserToChat_When_Dialogue()
+        public void Should_ThrowChatTypeMismatchException_When_AddUserToDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -257,16 +226,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             // add user
-            _chatsRepository.AddUser(chat.Id, users[2].Id);
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.AreEqual(chat.Users.Count(), 2);
-            var i = 0;
-            foreach (var user in chat.Users)
-            {
-                Assert.IsTrue(user.Id == users[i++].Id);
-            }
+            Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.AddUser(chat.Id, users[2].Id));
         }
 
         [TestMethod]
@@ -302,7 +262,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_NotAddUsersToChat_When_ContainsInvalidUser()
+        public void Should_ThrowArgumentException_When_AddUsersContainsInvalidUser()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -318,22 +278,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             // add user
-            _chatsRepository.AddUsers(chat.Id, new[] {User.InvalidId});
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.AreEqual(chat.Info.Title, "newChat");
-            Assert.AreEqual(chat.CreatorId, users[0].Id);
-            Assert.AreEqual(chat.Users.Count(), 2);
-            var i = 0;
-            foreach (var user in chat.Users)
-            {
-                Assert.IsTrue(user.Id == users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.AddUsers(chat.Id, new[] {User.InvalidId}));
         }
 
         [TestMethod]
-        public void Should_NotAddUsersToChat_When_ContainsDefaultUser()
+        public void Should_ThrowArgumentException_When_AddUsersContainsDefaultUser()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -349,22 +298,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             // add user
-            _chatsRepository.AddUsers(chat.Id, new[] {0});
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.AreEqual(chat.Info.Title, "newChat");
-            Assert.AreEqual(chat.CreatorId, users[0].Id);
-            Assert.AreEqual(chat.Users.Count(), 2);
-            var i = 0;
-            foreach (var user in chat.Users)
-            {
-                Assert.IsTrue(user.Id == users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.AddUsers(chat.Id, new[] {0}));
         }
 
         [TestMethod]
-        public void Should_NotAddUsersToChat_When_ChatIsDialogue()
+        public void Should_ThrowChatTypeMismatchException_When_AddUsersToCDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -381,16 +319,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             // add user
-            _chatsRepository.AddUsers(chat.Id, users.GetRange(2, 1).Select(x => x.Id));
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.AreEqual(chat.Users.Count(), 2);
-            var i = 0;
-            foreach (var user in chat.Users)
-            {
-                Assert.IsTrue(user.Id == users[i++].Id);
-            }
+            Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.AddUsers(chat.Id, users.GetRange(2, 1).Select(x => x.Id)));
         }
 
         [TestMethod]
@@ -416,14 +345,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_NotDeleteChat_When_InvalidId()
+        public void Should_ThrowArgumentException_When_DeleteInvalidChat()
         {
-            // act
-            _chatsRepository.DeleteChat(Chat.InvalidId);
-            var chat = _chatsRepository.GetChat(Chat.InvalidId);
-
-            // assert
-            Assert.IsNull(chat);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.DeleteChat(Chat.InvalidId));
         }
 
         [TestMethod]
@@ -451,12 +376,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_GetInvalidChatInfo()
+        public void Should_ThrowArgumentException_When_GetInvalidChatInfo()
         {
-            // act
-            var retChatInfo = _chatsRepository.GetChatInfo(Chat.InvalidId);
-            // assert
-            Assert.IsNull(retChatInfo);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.GetChatInfo(Chat.InvalidId));
         }
 
         [TestMethod]
@@ -483,7 +406,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_NoInfoOnDeleteChatInfo()
+        public void Should_ThrowArgumentNullException_When_NoInfoOnDeleteChatInfo()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -501,23 +424,17 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _chatsRepository.SetChatInfo(chat.Id, chatInfo);
             _chatsRepository.DeleteChatInfo(chat.Id);
             // try to delete already deleted info (should not fail)
-            _chatsRepository.DeleteChatInfo(chat.Id);
-            var retChatInfo = _chatsRepository.GetChatInfo(chat.Id);
-            // assert
-            Assert.IsNull(retChatInfo);
+            Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.DeleteChatInfo(chat.Id));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetChatInfoForInvalidChatAndGet()
+        public void Should_ThrowArgumentException_When_SetChatInfoForInvalidChat()
         {
             // arrange
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
 
-            // act
-            _chatsRepository.SetChatInfo(Chat.InvalidId, chatInfo);
-            var retChatInfo = _chatsRepository.GetChatInfo(Chat.InvalidId);
-            // assert
-            Assert.IsNull(retChatInfo);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetChatInfo(Chat.InvalidId, chatInfo));
         }
 
         [TestMethod]
@@ -547,7 +464,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_InfoIsNull()
+        public void Should_ThrowArgumentNullException_When_InfoIsNull()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -563,11 +480,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             users.ForEach(x => _tempUsers.Add(x.Id));
 
             _chatsRepository.SetChatInfo(chat.Id, chatInfo);
-            _chatsRepository.SetChatInfo(chat.Id, null);
-            var retChatInfo = _chatsRepository.GetChatInfo(chat.Id);
             // assert
-            Assert.AreEqual(retChatInfo.Title, chatInfo.Title);
-            Assert.IsTrue(retChatInfo.Avatar.SequenceEqual(chatInfo.Avatar));
+            Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.SetChatInfo(chat.Id, null));
         }
 
         [TestMethod]
@@ -617,7 +531,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetInfoForDialog()
+        public void Should_ThrowChatTypeMismatchException_When_SetInfoForDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -631,12 +545,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
-
-            _chatsRepository.SetChatInfo(chat.Id, chatInfo);
-            var retChatInfo = _chatsRepository.GetChatInfo(chat.Id);
-
             // assert
-            Assert.IsNull(retChatInfo);
+            Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.SetChatInfo(chat.Id, chatInfo));
         }
 
         [TestMethod]
@@ -661,7 +571,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_CreatorIsInvalid()
+        public void Should_ThrowArgumentException_When_CreatorIsInvalid()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -674,15 +584,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
-
-            _chatsRepository.SetCreator(chat.Id, User.InvalidId);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.CreatorId, newChat.CreatorId);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetCreator(chat.Id, User.InvalidId));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_NewCreatorIsNotInChat()
+        public void Should_ThrowArgumentException_When_NewCreatorIsNotInChat()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -700,15 +607,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             users.ForEach(x => _tempUsers.Add(x.Id));
             _tempUsers.Add(otherUser.Id);
-            
-            _chatsRepository.SetCreator(chat.Id, otherUser.Id);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.CreatorId, newChat.CreatorId);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetCreator(chat.Id, otherUser.Id));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_CreatorIsDefault()
+        public void Should_ThrowArgumentException_When_CreatorIsDefault()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -722,15 +626,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
-
-            _chatsRepository.SetCreator(chat.Id, 0);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.CreatorId, newChat.CreatorId);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetCreator(chat.Id, 0));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SetCreatorForInvalidChat()
+        public void Should_ThrowArgumentException_When_SetCreatorForInvalidChat()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser51", Password = "asd" };
@@ -739,14 +640,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
 
-            _chatsRepository.SetCreator(Chat.InvalidId, user.Id);
-            var newChat = _chatsRepository.GetChat(Chat.InvalidId);
             // assert
-            Assert.IsNull(newChat);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetCreator(Chat.InvalidId, user.Id));
+
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SetCreatorForDialog()
+        public void Should_ThrowChatTypeMistmatchException_When_SetCreatorForDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -760,10 +660,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             users.ForEach(x => _tempUsers.Add(x.Id));
 
-            _chatsRepository.SetCreator(chat.Id, users[1].Id);
-            var newCreator = _chatsRepository.GetChat(chat.Id).CreatorId;
             // assert
-            Assert.AreEqual(chat.CreatorId, newCreator);
+            Assert.ThrowsException<ChatTypeMismatchException>(() =>_chatsRepository.SetCreator(chat.Id, users[1].Id));
+            
         }
 
         [TestMethod]
@@ -789,7 +688,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickUserNotInChat()
+        public void Should_ThrowArgumentException_When_KickUserNotInChat()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -806,19 +705,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             users.ForEach(x => _tempUsers.Add(x.Id));
             _tempUsers.Add(otherUser.Id);
 
-            _chatsRepository.KickUser(chat.Id, otherUser.Id);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.KickUser(chat.Id, otherUser.Id));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickDefaultUser()
+        public void Should_ThrowArgumentException_When_KickDefaultUser()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -832,19 +724,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             users.ForEach(x => _tempUsers.Add(x.Id));
 
-            _chatsRepository.KickUser(chat.Id, 0);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.KickUser(chat.Id, 0));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickFromInvalidChat()
+        public void Should_ThrowArgumentException_When_KickFromInvalidChat()
         {
             // arrange 
             var userCred = new UserCredentials {Username = "testuser61", Password = "asd"};
@@ -853,15 +738,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
 
-            _chatsRepository.KickUser(Chat.InvalidId, user.Id);
-            var chat = _chatsRepository.GetChat(Chat.InvalidId);
-            
             // assert
-            Assert.IsNull(chat);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.KickUser(Chat.InvalidId, user.Id));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickFromDialog()
+        public void Should_ThrowChatTypeMismatchException_When_KickFromDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -875,19 +757,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             users.ForEach(x => _tempUsers.Add(x.Id));
 
-            _chatsRepository.KickUser(chat.Id, users[1].Id);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.KickUser(chat.Id, users[1].Id));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickCreator()
+        public void Should_ThrowUserIsCreatorException_When_KickCreator()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -901,15 +776,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             users.ForEach(x => _tempUsers.Add(x.Id));
 
-            _chatsRepository.KickUser(chat.Id, chat.CreatorId);
-            var newChat = _chatsRepository.GetChat(chat.Id);
-            // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<UserIsCreatorException>(() => _chatsRepository.KickUser(chat.Id, chat.CreatorId));
         }
 
         [TestMethod]
@@ -935,7 +802,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickContainsCreator()
+        public void Should_ThrowUserIsCreatorException_When_KickContainsCreator()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -948,20 +815,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
-
-            _chatsRepository.KickUsers(chat.Id, new[] {chat.CreatorId});
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<UserIsCreatorException>(() => _chatsRepository.KickUsers(chat.Id, new[] {chat.CreatorId}));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickUsersFromDialog()
+        public void Should_ThrowChatTypeMismatchException_When_KickUsersFromDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -974,20 +833,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
 
             users.ForEach(x => _tempUsers.Add(x.Id));
-
-            _chatsRepository.KickUsers(chat.Id, users.Select(x => x.Id));
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.KickUsers(chat.Id, users.GetRange(1, 1).Select(x => x.Id)));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickContainsUserNotInChat()
+        public void Should_ThrowArgumentException_When_KickContainsUserNotInChat()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -1003,20 +854,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             users.ForEach(x => _tempUsers.Add(x.Id));
             _tempUsers.Add(otherUser.Id);
-
-            _chatsRepository.KickUsers(chat.Id, new [] {otherUser.Id});
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.KickUsers(chat.Id, new [] {otherUser.Id}));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KickContainsDefaultUser()
+        public void Should_ThrowArgumentException_When_KickContainsDefaultUser()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -1029,20 +872,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "asd");
 
             users.ForEach(x => _tempUsers.Add(x.Id));
-
-            _chatsRepository.KickUsers(chat.Id, new[] {0});
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
-            var i = 0;
-            foreach (var user in newChat.Users)
-            {
-                Assert.AreEqual(user.Id, users[i++].Id);
-            }
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.KickUsers(chat.Id, new[] {0}));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KicksFromInvalidChat()
+        public void Should_ThrowArgumentException_When_KicksFromInvalidChat()
         {
             // arrange 
             var userCred = new UserCredentials { Username = "testuser75", Password = "asd" };
@@ -1050,16 +885,13 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // act
             var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
-
-            _chatsRepository.KickUsers(Chat.InvalidId, new[] {user.Id});
-            var chat = _chatsRepository.GetChat(Chat.InvalidId);
-
             // assert
-            Assert.IsNull(chat);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.KickUsers(Chat.InvalidId, new[] {user.Id}));
+
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_KicksIsNull()
+        public void Should_ThrowArgumentNullException_When_KicksIsNull()
         {
             // arrange 
             var userCred = new UserCredentials { Username = "testuser75", Password = "asd" };
@@ -1068,11 +900,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
             var chat = _chatsRepository.CreateGroupChat(new[] {user.Id}, "hey");
-
-            _chatsRepository.KickUsers(chat.Id, null);
-            var newChat = _chatsRepository.GetChat(chat.Id);
             // assert
-            Assert.AreEqual(chat.Users.Count(), newChat.Users.Count());
+            Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.KickUsers(chat.Id, null));
         }
 
 
@@ -1105,7 +934,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetRoleForUserNotInChat()
+        public void Should_ThrowsArgumentException_When_SetRoleForUserNotInChat()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser78", Password = "asd" };
@@ -1121,15 +950,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(notChatUser.Id);
             _tempChats.Add(chat.Id);
 
-            _chatsRepository.SetChatSpecificRole(notChatUser.Id, chat.Id, UserRoles.Moderator);
-            var role = _chatsRepository.GetChatSpecificInfo(notChatUser.Id, chat.Id)?.Role;
-
             // assert
-            Assert.IsNull(role);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetChatSpecificRole(notChatUser.Id, chat.Id, UserRoles.Moderator));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetChatSpecificRoleForDefaultUser()
+        public void Should_ThrowArgumentException_When_SetChatSpecificRoleForDefaultUser()
         {
             // arrange
             var listenerUserCred = new UserCredentials { Username = "testuser76", Password = "asd" };
@@ -1144,14 +970,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(listenerUser.Id);
             _tempUsers.Add(regularUser.Id);
             _tempChats.Add(chat.Id);
-
-            var nullVal = _chatsRepository.SetChatSpecificRole(0, chat.Id, UserRoles.Regular);
             // assert
-            Assert.IsNull(nullVal);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetChatSpecificRole(0, chat.Id, UserRoles.Regular));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetRoleForInvalidChat()
+        public void Should_ThrowArgumentException_When_SetRoleForInvalidChat()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser80", Password = "asd" };
@@ -1159,11 +983,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // act
             var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
             _tempUsers.Add(user.Id);
-            _chatsRepository.SetChatSpecificRole(user.Id, Chat.InvalidId, UserRoles.Moderator);
-            var role = _chatsRepository.GetChatSpecificInfo(user.Id, Chat.InvalidId)?.Role;
-
             // assert
-            Assert.IsNull(role);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetChatSpecificRole(user.Id, Chat.InvalidId, UserRoles.Moderator));
         }
 
         [TestMethod]
@@ -1189,7 +1010,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_DeleteChatSpecificInfoForDefaultUser()
+        public void Should_ThrowArgumentException_When_DeleteChatSpecificInfoForDefaultUser()
         {
             // arrange
             var userCred = new UserCredentials {Username = "asdajklsd", Password = "asd"};
@@ -1199,12 +1020,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat = _chatsRepository.CreateGroupChat(new [] {user.Id}, "newChat");
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
-
-            _chatsRepository.DeleteChatSpecificInfo(0, chat.Id);
-            var chatSpecificInfo = _chatsRepository.GetChatSpecificInfo(0, chat.Id);
-
             // assert
-            Assert.IsNull(chatSpecificInfo);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.DeleteChatSpecificInfo(0, chat.Id));
 
         }
 
@@ -1252,7 +1069,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetInfoForUserNotInChat()
+        public void Should_ThrowArgumentException_When_SetInfoForUserNotInChat()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser84", Password = "asd" };
@@ -1267,15 +1084,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(other.Id);
             _tempChats.Add(chat.Id);
 
-            _chatsRepository.SetChatSpecificInfo(other.Id, chat.Id, userInfo, true);
-            var returnedInfo = _chatsRepository.GetChatSpecificInfo(other.Id, chat.Id);
-
-            // assert
-            Assert.IsNull(returnedInfo);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetChatSpecificInfo(other.Id, chat.Id, userInfo, true));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetInfoForDefaultUserInChat()
+        public void Should_ThrowArgumentException_When_SetInfoForDefaultUserInChat()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser84", Password = "asd" };
@@ -1287,11 +1100,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
 
-            _chatsRepository.SetChatSpecificInfo(0, chat.Id, userInfo);
-            var returnedInfo = _chatsRepository.GetChatSpecificInfo(0, chat.Id);
-
-            // assert
-            Assert.IsNull(returnedInfo);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetChatSpecificInfo(0, chat.Id, userInfo));
         }
 
         [TestMethod]
@@ -1317,7 +1126,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetChatUserInfoIsNull()
+        public void Should_ThrowArgumentNullException_When_SetChatUserInfoIsNull()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser82", Password = "asd" };
@@ -1329,15 +1138,12 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             _chatsRepository.DeleteChatSpecificInfo(user.Id, chat.Id);
-            _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, null);
-            var returnedInfo = _chatsRepository.GetChatSpecificInfo(user.Id, chat.Id);
-
             // assert
-            Assert.IsNull(returnedInfo);
+            Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, null));
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_SetChatUserInfoRoleIsNullAndSetRole()
+        public void Should_ThrowArgumentNullException_When_SetChatUserInfoRoleIsNullAndSetRole()
         {
             // arrange
             var userCred = new UserCredentials { Username = "testuser82", Password = "asd" };
@@ -1350,11 +1156,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             _chatsRepository.DeleteChatSpecificInfo(user.Id, chat.Id);
-            _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, chatUserInfo, true);
-            var returnedInfo = _chatsRepository.GetChatSpecificInfo(user.Id, chat.Id);
-
             // assert
-            Assert.IsNull(returnedInfo);
+            Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, chatUserInfo, true));
         }
 
         [TestCleanup]
@@ -1367,3 +1170,4 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
     }
 }
+
