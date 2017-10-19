@@ -36,7 +36,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
                 _userInfo = RepositoryBuilder.UsersRepository.GetUserInfo(Id);
                 _isUserInfoFetched = true;
                 return _userInfo;
-            }
+            } 
         }
 
         public override IEnumerable<ChatUserInfo> ChatUserInfos

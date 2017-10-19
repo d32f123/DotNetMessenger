@@ -363,7 +363,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var userChats = chatsRepository.GetUserChats(result.Id);
             //assert
             Assert.AreEqual(chatName, chat.Info.Title);
-            Assert.AreEqual(result.Id, chat.Users.Single().Id);
+            Assert.AreEqual(result.Id, chat.Users.Single());
 
             var enumerable = userChats as Chat[] ?? userChats.ToArray();
             Assert.AreEqual(chat.Id, enumerable.Single().Id);
@@ -478,7 +478,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             {
                 Assert.AreEqual(chat.Id, chats[i].Id);
                 Assert.AreEqual(chat.CreatorId, chats[i].CreatorId);
-                Assert.AreEqual(chat.Users.Single().Id, chats[i++].Users.Single().Id);
+                Assert.AreEqual(chat.Users.Single(), chats[i++].Users.Single());
             }
         }
 

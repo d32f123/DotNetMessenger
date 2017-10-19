@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using DotNetMessenger.Model;
 
 namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
@@ -6,18 +7,19 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
     public class ChatSqlProxy : Chat
     {
         private bool _areUsersFetched;
-        private IEnumerable<User> _users;
+        private IEnumerable<int> _users;
 
         private bool _isInfoFetched;
         private ChatInfo _info;
 
-        public override IEnumerable<User> Users
+        public override IEnumerable<int> Users
         {
             get
             {
                 if (_areUsersFetched)
                     return _users;
-                _users = RepositoryBuilder.ChatsRepository.GetChatUsers(Id);
+                var temp = RepositoryBuilder.ChatsRepository.GetChatUsers(Id);
+                _users =  (temp as List<User> ?? temp.ToList()).Select(x => x.Id);
                 _areUsersFetched = true;
                 return _users;
             }

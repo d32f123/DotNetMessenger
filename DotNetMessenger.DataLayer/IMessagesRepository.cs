@@ -78,8 +78,8 @@ namespace DotNetMessenger.DataLayer
         /// <param name="dateFrom"></param>
         /// <param name="dateTo"></param>
         /// <returns>Empty list if invalid chatId, else list of messages between <paramref name="dateFrom"/> and <paramref name="dateTo"/></returns>
-        IEnumerable<Message> GetChatMessagesInRange(int chatId, DateTime dateFrom, DateTime dateTo);
-
+        /// <remarks>Call with both dates == null is equivalent to <see cref="GetChatMessages"/> call</remarks>
+        IEnumerable<Message> GetChatMessagesInRange(int chatId, DateTime? dateFrom, DateTime? dateTo);
         /// <summary>
         /// Searches for a given string in a chat (regexp: ^*<paramref name="searchString"/>*$)
         /// </summary>

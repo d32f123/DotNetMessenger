@@ -20,9 +20,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         private int _chatId;
         private readonly List<int> _tempUsers = new List<int>();
 
-        private IChatsRepository _chatsRepository;
-        private IUsersRepository _usersRepository;
-        private IMessagesRepository _messagesRepository;
+        private ChatsRepository _chatsRepository;
+        private UsersRepository _usersRepository;
+        private MessagesRepository _messagesRepository;
 
         [TestInitialize]
         public void InitRepos()
@@ -55,12 +55,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_StoreEmptyMessage()
+        public void Should_ThrowArgumentNullException_When_StoreEmptyMessage()
         {
-            // act
-            var msg = _messagesRepository.StoreMessage(_userId, _chatId, null);
-            // assert
-            Assert.IsNull(msg);
+            // act and assert
+            Assert.ThrowsException<ArgumentNullException>(() =>_messagesRepository.StoreMessage(_userId, _chatId, null));
         }
 
         [TestMethod]
@@ -115,39 +113,35 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SentByDefaultUser()
+        public void Should_ThrowArgumentException_When_SentByDefaultUser()
         {
             // arrange
             const string text = "Some text right here alright";
-            // act
-            var msg = _messagesRepository.StoreMessage(0, _chatId, text);
-            // assert
-            Assert.IsNull(msg);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() =>  _messagesRepository.StoreMessage(0, _chatId, text));
+            
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SentByUserNotInChat()
+        public void Should_ThrowArgumentException_When_SentByUserNotInChat()
         {
             // arrange
             const string text = "Some text right here alright";
             // act
             var user = _usersRepository.CreateUser("joshua", "asd");
             _tempUsers.Add(user.Id);
-
-            var msg = _messagesRepository.StoreMessage(user.Id, _chatId, text);
             // assert
-            Assert.IsNull(msg);
+            Assert.ThrowsException<ArgumentException>(() => _messagesRepository.StoreMessage(user.Id, _chatId, text));
         }
 
         [TestMethod]
-        public void Should_DoNothing_When_SentToInvalidChat()
+        public void Should_ThrowArgumentException_When_SentToInvalidChat()
         {
             // arrange
             const string text = "Some text right here alright";
-            // act
-            var msg = _messagesRepository.StoreMessage(_userId, Chat.InvalidId, text);
-            // assert
-            Assert.IsNull(msg);
+            // act and assert
+            Assert.ThrowsException<ArgumentException>(() => _messagesRepository.StoreMessage(_userId, Chat.InvalidId, text));
+            
         }
 
         [TestMethod]
@@ -262,6 +256,33 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _messagesRepository.StoreMessage(_userId, _chatId, texts[1]);
             Thread.Sleep(8000);
             var msgs = _messagesRepository.SearchString(_chatId, "text");
+            // assert
+            var messages = msgs as Message[] ?? msgs.ToArray();
+            Assert.IsTrue(messages.Length == 2);
+
+            var i = 0;
+            foreach (var msg in messages)
+            {
+                Assert.AreEqual(texts[i++], msg.Text);
+                Assert.AreEqual(_userId, msg.SenderId);
+                Assert.AreEqual(_chatId, msg.ChatId);
+            }
+        }
+
+        [TestMethod]
+        public void Should_FindMessages_With_SearchStringWithBadCharacters()
+        {
+            // arrange
+            string[] texts =
+            {
+                "Some text right ! here alright",
+                "other text xdddd ! what"
+            };
+            // act
+            _messagesRepository.StoreMessage(_userId, _chatId, texts[0]);
+            _messagesRepository.StoreMessage(_userId, _chatId, texts[1]);
+            Thread.Sleep(8000);
+            var msgs = _messagesRepository.SearchString(_chatId, "!");
             // assert
             var messages = msgs as Message[] ?? msgs.ToArray();
             Assert.IsTrue(messages.Length == 2);

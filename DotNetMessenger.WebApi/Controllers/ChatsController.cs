@@ -349,11 +349,11 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}/info/role/{roleId:int}")]
         [HttpPut]
-        public ChatUserInfo SetChatSpecificUserRole(int chatId, int userId, UserRoles role)
+        public ChatUserInfo SetChatSpecificUserRole(int chatId, int userId, int roleId)
         {
             try
             {
-                return RepositoryBuilder.ChatsRepository.SetChatSpecificRole(userId, chatId, role);
+                return RepositoryBuilder.ChatsRepository.SetChatSpecificRole(userId, chatId, (UserRoles) roleId);
             }
             catch (ArgumentException)
             {
@@ -364,6 +364,11 @@ namespace DotNetMessenger.WebApi.Controllers
             {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
                     "Chat cannot be dialog"));
+            }
+            catch (Exception)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Forbidden,
+                    "Incorrect role"));
             }
         }
     }

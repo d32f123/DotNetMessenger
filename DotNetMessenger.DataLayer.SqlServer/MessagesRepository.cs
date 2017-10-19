@@ -33,10 +33,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// </exception>
         public Message StoreMessage(int senderId, int chatId, string text, IEnumerable<Attachment> attachments = null)
         {
+            if (string.IsNullOrEmpty(text) && attachments == null)
+                throw new ArgumentNullException();
             try
             {
-                if (string.IsNullOrEmpty(text) && attachments == null)
-                    throw new ArgumentNullException();
                 if (senderId == 0)
                     throw new ArgumentException();
                 using (var scope = new TransactionScope())
@@ -187,17 +187,20 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
+        /// <inheritdoc />
         /// <summary>
-        /// Gets message attachments given its <paramref name="messageId"/>
+        /// Gets message attachments given its <paramref name="messageId" />
         /// </summary>
         /// <param name="messageId">The id of the message</param>
-        /// <returns></returns>
+        /// <returns>List of attachments of the message</returns>
+        /// <exception cref="ArgumentException">Throws if message does not exist</exception>
         public IEnumerable<Attachment> GetMessageAttachments(int messageId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                /* TODO: CHECK IF EXISTS, IF NO THROW EXCEPTION */
+                if (!SqlHelper.DoesFieldValueExist(connection, "Messages", "ID", messageId, SqlDbType.Int))
+                    throw new ArgumentException();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT [ID], [Type], [AttachFile] FROM [Attachments] " +
@@ -222,40 +225,72 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Returns a list of <see cref="T:DotNetMessenger.Model.Message" />s in <paramref name="chatId" />
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <returns>List of messages in that change</returns>
+        /// <exception cref="T:System.ArgumentException">Throws if <paramref name="chatId" /> is invalid</exception>
         public IEnumerable<Message> GetChatMessages(int chatId)
         {
-            return GetChatMessagesInRange(chatId, DateTime.MinValue, DateTime.MaxValue);
+            return GetChatMessagesInRange(chatId, null, null);
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Returns a list of <see cref="T:DotNetMessenger.Model.Message" />s in <paramref name="chatId" />
+        /// in date interval: [<paramref name="dateFrom" />; +inf)
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="dateFrom">The opening value of the interval</param>
+        /// <returns>List of messages in range</returns>
+        /// <exception cref="T:System.ArgumentException">Throws if <paramref name="chatId" /> is invalid</exception>
         public IEnumerable<Message> GetChatMessagesFrom(int chatId, DateTime dateFrom)
         {
-            return GetChatMessagesInRange(chatId, dateFrom, DateTime.MaxValue);
+            return GetChatMessagesInRange(chatId, dateFrom, null);
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Returns a list of <see cref="T:DotNetMessenger.Model.Message" />s in <paramref name="chatId" />
+        /// in date interval: (-inf; <paramref name="dateTo" />]"/&gt;
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="dateTo">The closing value of the interval</param>
+        /// <returns>List of messages in range</returns>
+        /// <exception cref="T:System.ArgumentException">Throws if <paramref name="chatId" /> is invalid</exception>
         public IEnumerable<Message> GetChatMessagesTo(int chatId, DateTime dateTo)
         {
-            return GetChatMessagesInRange(chatId, DateTime.MinValue, dateTo);
+            return GetChatMessagesInRange(chatId, null, dateTo);
         }
-
-        public IEnumerable<Message> GetChatMessagesInRange(int chatId, DateTime dateFrom, DateTime dateTo)
+        /// <inheritdoc />
+        /// <summary>
+        /// Returns a list of <see cref="T:DotNetMessenger.Model.Message" />s in <paramref name="chatId" /> 
+        /// in date interval: [<paramref name="dateFrom" />; <paramref name="dateTo" />]
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="dateFrom">Opening value of the interval</param>
+        /// <param name="dateTo">Closing value of the interval</param>
+        /// <returns>List of messages in range</returns>
+        /// <exception cref="ArgumentException">Throws if <paramref name="chatId"/> is invalid</exception>
+        public IEnumerable<Message> GetChatMessagesInRange(int chatId, DateTime? dateFrom, DateTime? dateTo)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-
+                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                    throw new ArgumentException();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT [ID], [SenderID], [MessageText], [MessageDate] FROM [Messages] " +
                                           "WHERE [ChatID] = @chatId";
                     command.Parameters.AddWithValue("@chatId", chatId);
 
-                    if (dateFrom != DateTime.MinValue)
+                    if (dateFrom != null)
                     {
                         command.CommandText += " AND [MessageDate] >= @dateFrom";
                         command.Parameters.AddWithValue("@dateFrom", dateFrom);
                     }
-                    if (dateTo != DateTime.MaxValue)
+                    if (dateTo != null)
                     {
                         command.CommandText += " AND [MessageDate] <= @dateTo";
                         command.Parameters.AddWithValue("@dateTo", dateTo);
@@ -278,22 +313,33 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Searches <paramref name="searchString" /> in <paramref name="chatId" />
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="searchString"></param>
+        /// <returns>A list of <see cref="T:DotNetMessenger.Model.Message" />s that include <paramref name="searchString" /></returns>
+        /// <exception cref="ArgumentNullException">Throws if <paramref name="searchString"/> is null</exception>
+        /// <exception cref="ArgumentException">Throws if <paramref name="chatId"/> is invalid</exception>
         public IEnumerable<Message> SearchString(int chatId, string searchString)
         {
             if (string.IsNullOrEmpty(searchString))
-                yield break;
+                throw new ArgumentNullException();
+
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
 
+                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                    throw new ArgumentException();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = "SELECT [ID], [SenderID], [MessageText], [MessageDate] FROM [Messages] " +
                                           "WHERE [ChatID] = @chatId AND CONTAINS([MessageText], @searchString)";
 
                     command.Parameters.AddWithValue("@chatId", chatId);
-                    command.Parameters.AddWithValue("@searchString", "*" + searchString + "*");
+                    command.Parameters.AddWithValue("@searchString", "\"*" + searchString + "*\"");
 
                     using (var reader = command.ExecuteReader())
                     {
@@ -312,13 +358,21 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Gets message expiration date of <paramref name="messageId" />
+        /// </summary>
+        /// <param name="messageId">The id of the message</param>
+        /// <returns>Null if no expiration, else date of expiration</returns>
+        /// <exception cref="T:System.ArgumentException">Throws if no such message exists</exception>
         public DateTime? GetMessageExpirationDate(int messageId)
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
 
+                if (!SqlHelper.DoesFieldValueExist(connection, "Messages", "ID", messageId, SqlDbType.Int))
+                    throw new ArgumentException();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText =
@@ -329,7 +383,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
-
+        /// <inheritdoc />
+        /// <summary>
+        /// Calls a stored procedure to delete all expired messages
+        /// </summary>
         public void DeleteExpiredMessages()
         {
             using (var connection = new SqlConnection(_connectionString))

@@ -21,7 +21,7 @@ namespace DotNetMessenger.Model
         /// <summary>
         /// List of users in this specific chat
         /// </summary>
-        public virtual IEnumerable<User> Users { get; set; }
+        public virtual IEnumerable<int> Users { get; set; }
 
         public Chat()
         {

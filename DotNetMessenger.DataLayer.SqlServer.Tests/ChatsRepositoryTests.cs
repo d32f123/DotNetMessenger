@@ -27,7 +27,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         {
             RepositoryBuilder.ConnectionString = ConnectionString;
             _usersRepository = RepositoryBuilder.UsersRepository;
-            _chatsRepository = (ChatsRepository)RepositoryBuilder.ChatsRepository;
+            _chatsRepository = RepositoryBuilder.ChatsRepository;
         }
 
         [TestMethod]
@@ -54,7 +54,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i++].Id);
+                Assert.IsTrue(user == users[i++].Id);
             }
         }
 
@@ -132,7 +132,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i++].Id);
+                Assert.IsTrue(user == users[i++].Id);
             }
         }
 
@@ -164,7 +164,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i++].Id);
+                Assert.IsTrue(user == users[i++].Id);
             }
         }
 
@@ -257,7 +257,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var i = 0;
             foreach (var user in chat.Users)
             {
-                Assert.IsTrue(user.Id == users[i++].Id);
+                Assert.IsTrue(user == users[i++].Id);
             }
         }
 
