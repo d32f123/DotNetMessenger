@@ -269,33 +269,6 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             }
         }
 
-        [TestMethod]
-        public void Should_FindMessages_With_SearchStringWithBadCharacters()
-        {
-            // arrange
-            string[] texts =
-            {
-                "Some text right ! here alright",
-                "other text xdddd ! what"
-            };
-            // act
-            _messagesRepository.StoreMessage(_userId, _chatId, texts[0]);
-            _messagesRepository.StoreMessage(_userId, _chatId, texts[1]);
-            Thread.Sleep(8000);
-            var msgs = _messagesRepository.SearchString(_chatId, "!");
-            // assert
-            var messages = msgs as Message[] ?? msgs.ToArray();
-            Assert.IsTrue(messages.Length == 2);
-
-            var i = 0;
-            foreach (var msg in messages)
-            {
-                Assert.AreEqual(texts[i++], msg.Text);
-                Assert.AreEqual(_userId, msg.SenderId);
-                Assert.AreEqual(_chatId, msg.ChatId);
-            }
-        }
-
         [TestCleanup]
         public void Clean()
         {

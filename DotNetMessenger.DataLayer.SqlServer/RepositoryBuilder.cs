@@ -8,15 +8,13 @@
 
         public static string ConnectionString
         {
-            get
-            {
-                return _connectionString;
-            }
+            get => _connectionString;
             set
             {
                 _chatsRepository = null;
                 _usersRepository = null;
                 _messagesRepository = null;
+                _tokensRepository = null;
                 
                 _connectionString = value;
             }
@@ -25,18 +23,17 @@
         private static ChatsRepository _chatsRepository;
         private static UsersRepository _usersRepository;
         private static MessagesRepository _messagesRepository;
+        private static TokensRepository _tokensRepository;
 
         public static ChatsRepository ChatsRepository
         {
             get
             {
-                if (_chatsRepository == null)
-                {
-                    if (_usersRepository == null)
-                        _usersRepository = new UsersRepository(_connectionString);
-                    _chatsRepository = new ChatsRepository(_connectionString, _usersRepository);
-                    _usersRepository.ChatsRepository = _chatsRepository;
-                }
+                if (_chatsRepository != null) return _chatsRepository;
+                if (_usersRepository == null)
+                    _usersRepository = new UsersRepository(_connectionString);
+                _chatsRepository = new ChatsRepository(_connectionString, _usersRepository);
+                _usersRepository.ChatsRepository = _chatsRepository;
                 return _chatsRepository;
             }
         }
@@ -45,19 +42,20 @@
         {
             get
             {
-                if (_usersRepository == null)
-                {
-                    if (_chatsRepository == null)
-                        _chatsRepository = new ChatsRepository(_connectionString);
-                    _usersRepository = new UsersRepository(_connectionString, _chatsRepository);
-                    _chatsRepository.UsersRepository = _usersRepository;
-                }
+                if (_usersRepository != null) return _usersRepository;
+                if (_chatsRepository == null)
+                    _chatsRepository = new ChatsRepository(_connectionString);
+                _usersRepository = new UsersRepository(_connectionString, _chatsRepository);
+                _chatsRepository.UsersRepository = _usersRepository;
                 return _usersRepository;
             }
         }
 
         public static MessagesRepository MessagesRepository =>
             _messagesRepository ?? (_messagesRepository = new MessagesRepository(_connectionString));
+
+        public static TokensRepository TokensRepository =>
+            _tokensRepository ?? (_tokensRepository = new TokensRepository(_connectionString));
 
     }
 }

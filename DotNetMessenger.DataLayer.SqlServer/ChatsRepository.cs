@@ -40,43 +40,44 @@ namespace DotNetMessenger.DataLayer.SqlServer
             // check for default user
             if (userId == 0)
                 throw new ArgumentException();
-            try
+
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
+                    (int) ChatTypes.Dialog))
+                    throw new ChatTypeMismatchException();
+
+                // make an entry in chatusers table
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
-
-                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
-                        (int) ChatTypes.Dialog))
-                        throw new ChatTypeMismatchException();
-
-                    // make an entry in chatusers table
-                    using (var command = connection.CreateCommand())
+                    command.CommandText = "INSERT INTO [ChatUsers]([UserID], [ChatID]) VALUES " +
+                                            "(@userId, @chatId)";
+                    command.Parameters.AddWithValue("@userId", userId);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    try
                     {
-                        command.CommandText = "INSERT INTO [ChatUsers]([UserID], [ChatID]) VALUES " +
-                                              "(@userId, @chatId)";
-                        command.Parameters.AddWithValue("@userId", userId);
-                        command.Parameters.AddWithValue("@chatId", chatId);
-
                         command.ExecuteNonQuery();
                     }
-                    // make an entry in chatuserinfos table
-                    using (var command = connection.CreateCommand())
+                    catch (SqlException)
                     {
-                        command.CommandText =
-                            "INSERT INTO [ChatUserInfos] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
-
-                        command.Parameters.AddWithValue("@userId", userId);
-                        command.Parameters.AddWithValue("@chatId", chatId);
-
-                        command.ExecuteNonQuery();
+                        throw new ArgumentException();
                     }
+            }
+                // make an entry in chatuserinfos table
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText =
+                        "INSERT INTO [ChatUserInfos] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
+
+                    command.Parameters.AddWithValue("@userId", userId);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+
+                    command.ExecuteNonQuery();
                 }
             }
-            catch (SqlException)
-            {
-                throw new ArgumentException();
-            }
+            
         }
         /// <inheritdoc />
         /// <summary>
@@ -94,35 +95,37 @@ namespace DotNetMessenger.DataLayer.SqlServer
             var idList = newUsers as int[] ?? newUsers.ToArray();
             if (idList.Contains(0))
                 throw new ArgumentException();
-            try
+
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
+                    (int) ChatTypes.Dialog))
+                    throw new ChatTypeMismatchException();
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
+                    // call a stored procedure
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "AddUsersToChat";
 
-                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "[ID]", chatId, "[ChatType]",
-                        (int) ChatTypes.Dialog))
-                        throw new ChatTypeMismatchException();
-                    using (var command = connection.CreateCommand())
+                    var parameter =
+                        command.Parameters.AddWithValue("@IDList", SqlHelper.IdListToDataTable(idList));
+                    parameter.SqlDbType = SqlDbType.Structured;
+                    parameter.TypeName = "IdListType";
+                    command.Parameters.AddWithValue("@ChatID", chatId);
+
+                    try
                     {
-                        // call a stored procedure
-                        command.CommandType = CommandType.StoredProcedure;
-                        command.CommandText = "AddUsersToChat";
-
-
-                        var parameter =
-                            command.Parameters.AddWithValue("@IDList", SqlHelper.IdListToDataTable(idList));
-                        parameter.SqlDbType = SqlDbType.Structured;
-                        parameter.TypeName = "IdListType";
-                        command.Parameters.AddWithValue("@ChatID", chatId);
                         command.ExecuteNonQuery();
+                    }
+                    catch (SqlException)
+                    {
+                        throw new ArgumentException();
                     }
                 }
             }
-            catch (SqlException)
-            {
-                throw new ArgumentException();
-            }
+            
         }
         /// <inheritdoc />
         /// <summary>
@@ -178,81 +181,89 @@ namespace DotNetMessenger.DataLayer.SqlServer
             if (membersList.Contains(0))
                 throw new ArgumentException();
 
-            try
+            using (var scope = new TransactionScope())
             {
-                using (var scope = new TransactionScope())
+                using (var connection = new SqlConnection(_connectionString))
                 {
-                    using (var connection = new SqlConnection(_connectionString))
+                    connection.Open();
+
+                    var chatInfo = new ChatInfo {Title = title};
+                    var userIds = members as int[] ?? membersList.ToArray();
+
+                    var chat = new ChatSqlProxy
                     {
-                        connection.Open();
+                        ChatType = chatType,
+                        CreatorId = userIds[0],
+                        Info = chatInfo
+                    };
 
-                        var chatInfo = new ChatInfo {Title = title};
-                        var userIds = members as int[] ?? membersList.ToArray();
+                    // Create new chat
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText =
+                            "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
 
-                        var chat = new ChatSqlProxy
+                        command.Parameters.AddWithValue("@chatType", (int) (chat.ChatType));
+                        command.Parameters.AddWithValue("@creatorId", chat.CreatorId);
+
+                        try
                         {
-                            ChatType = chatType,
-                            CreatorId = userIds[0],
-                            Info = chatInfo
-                        };
-
-                        // Create new chat
-                        using (var command = connection.CreateCommand())
-                        {
-                            command.CommandText =
-                                "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
-
-                            command.Parameters.AddWithValue("@chatType", (int) (chat.ChatType));
-                            command.Parameters.AddWithValue("@creatorId", chat.CreatorId);
-
                             chat.Id = (int) command.ExecuteScalar();
                         }
-
-                        // Add users to chat
-                        foreach (var userId in userIds)
+                        catch
                         {
-                            using (var command = connection.CreateCommand())
-                            {
-                                command.CommandText =
-                                    "INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
-
-                                command.Parameters.AddWithValue("@userId", userId);
-                                command.Parameters.AddWithValue("@chatId", chat.Id);
-
-                                command.ExecuteNonQuery();
-                            }
-                            using (var command = connection.CreateCommand())
-                            {
-                                command.CommandText =
-                                    "INSERT INTO [ChatUserInfos] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
-
-                                command.Parameters.AddWithValue("@userId", userId);
-                                command.Parameters.AddWithValue("@chatId", chat.Id);
-
-                                command.ExecuteNonQuery();
-                            }
+                            // means that the creator is invalid
+                            throw new ArgumentException();
                         }
+                    }
 
-                        // Add chat title
+                    // Add users to chat
+                    foreach (var userId in userIds)
+                    {
                         using (var command = connection.CreateCommand())
                         {
                             command.CommandText =
-                                "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, NULL)";
+                                "INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
 
+                            command.Parameters.AddWithValue("@userId", userId);
                             command.Parameters.AddWithValue("@chatId", chat.Id);
-                            command.Parameters.AddWithValue("@title", chatInfo.Title);
+                            try
+                            {
+                                command.ExecuteNonQuery();
+                            }
+                            catch
+                            {
+                                // means that some ids are invalid
+                                throw new ArgumentException();
+                            }
+                        }
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText =
+                                "INSERT INTO [ChatUserInfos] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
+
+                            command.Parameters.AddWithValue("@userId", userId);
+                            command.Parameters.AddWithValue("@chatId", chat.Id);
 
                             command.ExecuteNonQuery();
                         }
-
-                        scope.Complete();
-                        return chat;
                     }
+
+                    // Add chat title
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText =
+                            "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, NULL)";
+
+                        command.Parameters.AddWithValue("@chatId", chat.Id);
+                        command.Parameters.AddWithValue("@title", chatInfo.Title);
+
+                        command.ExecuteNonQuery();
+                    }
+
+                    scope.Complete();
+                    return chat;
                 }
-            }
-            catch
-            {
-                throw new ArgumentException();
             }
         }
         /// <inheritdoc />
@@ -713,55 +724,55 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 throw new ArgumentNullException();
             if (userId == 0)
                 throw new ArgumentException();
-            try
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+
+                // check if chat is dialog
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                    throw new ChatTypeMismatchException();
+
+                // is there an entry in the table already?
+                var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
+                    "[ChatID]", chatId);
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
-
-                    // check if chat is dialog
-                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
-                        throw new ChatTypeMismatchException();
-
-                    // is there an entry in the table already?
-                    var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
-                        "[ChatID]", chatId);
-                    using (var command = connection.CreateCommand())
+                    var sb = new StringBuilder();
+                    if (infoExists)
                     {
-                        var sb = new StringBuilder();
-                        if (infoExists)
-                        {
-                            // if there is already an entry, update it
-                            sb.Append("UPDATE [ChatUserInfos] SET [Nickname] = @nickName");
-                            if (updateRole)
-                                sb.Append(", [UserRole] = @userRole");
-                            sb.Append(" WHERE [UserID] = @userId AND [ChatID] = @chatId");
-                        }
-                        else
-                        {
-                            // else create a new one
-                            sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [Nickname]");
-                            sb.Append(updateRole ? ", [UserRole]) " : ") ");
-                            sb.Append("VALUES (@userId, @chatId, @nickName");
-                            sb.Append(updateRole ? ", @userRole)" : ")");
-                        }
-                        command.CommandText = sb.ToString();
-
-                        command.Parameters.AddWithValue("@nickName", userInfo.Nickname);
-                        command.Parameters.AddWithValue("@chatId", chatId);
-                        command.Parameters.AddWithValue("@userId", userId);
+                        // if there is already an entry, update it
+                        sb.Append("UPDATE [ChatUserInfos] SET [Nickname] = @nickName");
                         if (updateRole)
-                        {
-                            command.Parameters.AddWithValue("@userRole", (int) userInfo.Role.RoleType);
-                        }
+                            sb.Append(", [UserRole] = @userRole");
+                        sb.Append(" WHERE [UserID] = @userId AND [ChatID] = @chatId");
+                    }
+                    else
+                    {
+                        // else create a new one
+                        sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [Nickname]");
+                        sb.Append(updateRole ? ", [UserRole]) " : ") ");
+                        sb.Append("VALUES (@userId, @chatId, @nickName");
+                        sb.Append(updateRole ? ", @userRole)" : ")");
+                    }
+                    command.CommandText = sb.ToString();
 
+                    command.Parameters.AddWithValue("@nickName", userInfo.Nickname);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    command.Parameters.AddWithValue("@userId", userId);
+                    if (updateRole)
+                    {
+                        command.Parameters.AddWithValue("@userRole", (int) userInfo.Role.RoleType);
+                    }
+
+                    try
+                    {
                         command.ExecuteNonQuery();
                     }
+                    catch (SqlException)
+                    {
+                        throw new ArgumentException();
+                    }
                 }
-            }
-            catch (SqlException)
-            {
-                throw new ArgumentException();
             }
         }
         /// <inheritdoc />
@@ -778,42 +789,42 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             if (userId == 0)
                 throw new ArgumentException();
-            try
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+
+                // check if chat is dialog
+                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
+                    throw new ChatTypeMismatchException();
+
+                var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
+                    "[ChatID]", chatId);
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
+                    var sb = new StringBuilder();
+                    if (infoExists)
+                        sb.Append("UPDATE [ChatUserInfos] SET [UserRole] = @userRole ")
+                            .Append("WHERE [UserID] = @userId AND [ChatID] = @chatId");
+                    else
+                        sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [UserRole]) ")
+                            .Append("VALUES (@userId, @chatId, @userRole)");
+                    command.CommandText = sb.ToString();
 
-                    // check if chat is dialog
-                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
-                        throw new ChatTypeMismatchException();
+                    command.Parameters.AddWithValue("@userRole", (int) userRole);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    command.Parameters.AddWithValue("@userId", userId);
 
-                    var infoExists = SqlHelper.DoesDoubleKeyExist(connection, "ChatUserInfos", "[UserID]", userId,
-                        "[ChatID]", chatId);
-                    using (var command = connection.CreateCommand())
+                    try
                     {
-                        var sb = new StringBuilder();
-                        if (infoExists)
-                            sb.Append("UPDATE [ChatUserInfos] SET [UserRole] = @userRole ")
-                                .Append("WHERE [UserID] = @userId AND [ChatID] = @chatId");
-                        else
-                            sb.Append("INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [UserRole]) ")
-                                .Append("VALUES (@userId, @chatId, @userRole)");
-                        command.CommandText = sb.ToString();
-
-                        command.Parameters.AddWithValue("@userRole", (int) userRole);
-                        command.Parameters.AddWithValue("@chatId", chatId);
-                        command.Parameters.AddWithValue("@userId", userId);
-
                         command.ExecuteNonQuery();
-                        return GetChatSpecificInfo(userId, chatId);
                     }
+                    catch (SqlException)
+                    {
+                        // means that there is no such chat id or user id
+                        throw new ArgumentException();
+                    }
+                    return GetChatSpecificInfo(userId, chatId);
                 }
-            }
-            catch (SqlException)
-            {
-                // means that there is no such chat id or user id
-                throw new ArgumentException();
             }
         }
         /// <inheritdoc />

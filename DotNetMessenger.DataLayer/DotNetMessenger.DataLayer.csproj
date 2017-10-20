@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="IChatsRepository.cs" />
     <Compile Include="IMessagesRepository.cs" />
+    <Compile Include="ITokensRepository.cs" />
     <Compile Include="IUsersRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

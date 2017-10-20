@@ -53,6 +53,7 @@
     <Compile Include="SqlHelper.cs" />
     <Compile Include="MessagesRepository.cs" />
     <Compile Include="ModelProxies\UserSqlProxy.cs" />
+    <Compile Include="TokensRepository.cs" />
     <Compile Include="UsersRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

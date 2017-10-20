@@ -28,7 +28,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
             return dataTable;
         }
-
         /// <summary>
         /// Checks whether <paramref name="value"/> exists in <paramref name="tableName"/>'s <paramref name="fieldName"/> field
         /// </summary>
@@ -54,7 +53,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 return ((int)command.ExecuteScalar()) > 0;
             }
         }
-
         /// <summary>
         /// Checks whether a double key exists in a <paramref name="tableName"/>
         /// </summary>
@@ -79,7 +77,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 return ((int)command.ExecuteScalar()) > 0;
             }
         }
-
         /// <summary>
         /// Checks whether the field of the row selected with <paramref name="id"/> in <paramref name="tableName"/> 
         /// is in the given <paramref name="range"/>

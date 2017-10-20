@@ -35,33 +35,33 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             if (string.IsNullOrEmpty(text) && attachments == null)
                 throw new ArgumentNullException();
-            try
+            if (senderId == 0)
+                throw new ArgumentException();
+            using (var scope = new TransactionScope())
             {
-                if (senderId == 0)
-                    throw new ArgumentException();
-                using (var scope = new TransactionScope())
+                using (var connection = new SqlConnection(_connectionString))
                 {
-                    using (var connection = new SqlConnection(_connectionString))
+                    connection.Open();
+
+                    // Insert the message
+                    var message = new MessageSqlProxy {ChatId = chatId, SenderId = senderId, Text = text};
+                    using (var command = connection.CreateCommand())
                     {
-                        connection.Open();
+                        command.CommandText = "DECLARE @T TABLE (ID INT, MessageDate DATETIME)\n" +
+                                                "INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText]) " +
+                                                "OUTPUT INSERTED.[ID], INSERTED.[MessageDate] INTO @T " +
+                                                "VALUES (@chatId, @senderId, @messageText)\n" +
+                                                "SELECT [ID], [MessageDate] FROM @T";
 
-                        // Insert the message
-                        var message = new MessageSqlProxy {ChatId = chatId, SenderId = senderId, Text = text};
-                        using (var command = connection.CreateCommand())
+                        command.Parameters.AddWithValue("@chatId", chatId);
+                        command.Parameters.AddWithValue("@senderId", senderId);
+                        if (text == null)
+                            command.Parameters.AddWithValue("@messageText", DBNull.Value);
+                        else
+                            command.Parameters.AddWithValue("@messageText", text);
+
+                        try
                         {
-                            command.CommandText = "DECLARE @T TABLE (ID INT, MessageDate DATETIME)\n" +
-                                                  "INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText]) " +
-                                                  "OUTPUT INSERTED.[ID], INSERTED.[MessageDate] INTO @T " +
-                                                  "VALUES (@chatId, @senderId, @messageText)\n" +
-                                                  "SELECT [ID], [MessageDate] FROM @T";
-
-                            command.Parameters.AddWithValue("@chatId", chatId);
-                            command.Parameters.AddWithValue("@senderId", senderId);
-                            if (text == null)
-                                command.Parameters.AddWithValue("@messageText", DBNull.Value);
-                            else
-                                command.Parameters.AddWithValue("@messageText", text);
-
                             using (var reader = command.ExecuteReader())
                             {
                                 reader.Read();
@@ -69,41 +69,41 @@ namespace DotNetMessenger.DataLayer.SqlServer
                                 message.Date = reader.GetDateTime(reader.GetOrdinal("MessageDate"));
                             }
                         }
-
-                        //Insert attachments if not null
-
-                        if (attachments == null)
+                        catch (SqlException)
                         {
-                            message.Attachments = null;
+                            throw new ArgumentException();
                         }
-                        else
-                        {
-                            foreach (var attachment in attachments)
-                                using (var command = connection.CreateCommand())
-                                {
-                                    command.CommandText =
-                                        "INSERT INTO [Attachments] ([Type], [AttachFile], [MessageID]) " +
-                                        "OUTPUT INSERTED.[ID] " +
-                                        "VALUES (@type, @attachFile, @messageId)";
-
-                                    command.Parameters.AddWithValue("@type", (int) attachment.Type);
-                                    command.Parameters.AddWithValue("@messageId", message.Id);
-                                    var attachFile =
-                                        new SqlParameter("@attachFile", SqlDbType.VarBinary, attachment.File.Length)
-                                            {Value = attachment.File};
-                                    command.Parameters.Add(attachFile);
-
-                                    attachment.Id = (int) command.ExecuteScalar();
-                                }
-                        }
-                        scope.Complete();
-                        return message;
                     }
+
+                    //Insert attachments if not null
+
+                    if (attachments == null)
+                    {
+                        message.Attachments = null;
+                    }
+                    else
+                    {
+                        foreach (var attachment in attachments)
+                            using (var command = connection.CreateCommand())
+                            {
+                                command.CommandText =
+                                    "INSERT INTO [Attachments] ([Type], [AttachFile], [MessageID]) " +
+                                    "OUTPUT INSERTED.[ID] " +
+                                    "VALUES (@type, @attachFile, @messageId)";
+
+                                command.Parameters.AddWithValue("@type", (int) attachment.Type);
+                                command.Parameters.AddWithValue("@messageId", message.Id);
+                                var attachFile =
+                                    new SqlParameter("@attachFile", SqlDbType.VarBinary, attachment.File.Length)
+                                        {Value = attachment.File};
+                                command.Parameters.Add(attachFile);
+
+                                attachment.Id = (int) command.ExecuteScalar();
+                            }
+                    }
+                    scope.Complete();
+                    return message;
                 }
-            }
-            catch
-            {
-                throw new ArgumentException();
             }
         }
         /// <inheritdoc />

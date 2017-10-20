@@ -243,95 +243,95 @@ namespace DotNetMessenger.DataLayer.SqlServer
             if (userInfo == null)
                 throw new ArgumentNullException(nameof(userInfo));
 
-            try
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
-                    using (var command = connection.CreateCommand())
+                    // check if entry of the user exists
+                    if (SqlHelper.DoesFieldValueExist(connection, "UserInfos", "UserID", userId, SqlDbType.Int))
                     {
-                        // check if entry of the user exists
-                        if (SqlHelper.DoesFieldValueExist(connection, "UserInfos", "UserID", userId, SqlDbType.Int))
-                        {
-                            command.CommandText =
-                                "UPDATE [UserInfos] SET [LastName] = @lastName, [FirstName] = @firstName, " +
-                                "[Phone] = @phone, [Email] = @email, [DateOfBirth] = @dateOfBirth, " +
-                                "[Avatar] = @avatar WHERE [UserID] = @userId";
-                        }
-                        else
-                        {
-                            command.CommandText =
-                                "INSERT INTO [UserInfos] ([UserID], [LastName], [FirstName], [Phone], [Email], [DateOfBirth], " +
-                                "[Avatar]) VALUES (@userId, @lastName, @firstName, @phone, @email, @dateOfBirth, @avatar)";
-                        }
+                        command.CommandText =
+                            "UPDATE [UserInfos] SET [LastName] = @lastName, [FirstName] = @firstName, " +
+                            "[Phone] = @phone, [Email] = @email, [DateOfBirth] = @dateOfBirth, " +
+                            "[Avatar] = @avatar WHERE [UserID] = @userId";
+                    }
+                    else
+                    {
+                        command.CommandText =
+                            "INSERT INTO [UserInfos] ([UserID], [LastName], [FirstName], [Phone], [Email], [DateOfBirth], " +
+                            "[Avatar]) VALUES (@userId, @lastName, @firstName, @phone, @email, @dateOfBirth, @avatar)";
+                    }
 
-                        command.Parameters.AddWithValue("@userId", userId);
+                    command.Parameters.AddWithValue("@userId", userId);
 
-                        if (userInfo.LastName == null)
-                        {
-                            command.Parameters.AddWithValue("@lastName", DBNull.Value);
-                        }
-                        else
-                        {
-                            command.Parameters.AddWithValue("@lastName", userInfo.LastName);
-                        }
+                    if (userInfo.LastName == null)
+                    {
+                        command.Parameters.AddWithValue("@lastName", DBNull.Value);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@lastName", userInfo.LastName);
+                    }
 
-                        if (userInfo.FirstName == null)
-                        {
-                            command.Parameters.AddWithValue("@firstName", DBNull.Value);
-                        }
-                        else
-                        {
-                            command.Parameters.AddWithValue("@firstName", userInfo.FirstName);
-                        }
+                    if (userInfo.FirstName == null)
+                    {
+                        command.Parameters.AddWithValue("@firstName", DBNull.Value);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@firstName", userInfo.FirstName);
+                    }
 
-                        if (userInfo.Phone == null)
-                        {
-                            command.Parameters.AddWithValue("@phone", DBNull.Value);
-                        }
-                        else
-                        {
-                            command.Parameters.AddWithValue("@phone", userInfo.Phone);
-                        }
+                    if (userInfo.Phone == null)
+                    {
+                        command.Parameters.AddWithValue("@phone", DBNull.Value);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@phone", userInfo.Phone);
+                    }
 
-                        if (userInfo.Email == null)
-                        {
-                            command.Parameters.AddWithValue("@email", DBNull.Value);
-                        }
-                        else
-                        {
-                            command.Parameters.AddWithValue("@email", userInfo.Email);
-                        }
+                    if (userInfo.Email == null)
+                    {
+                        command.Parameters.AddWithValue("@email", DBNull.Value);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@email", userInfo.Email);
+                    }
 
-                        if (userInfo.DateOfBirth == null)
-                        {
-                            command.Parameters.AddWithValue("@dateOfBirth", DBNull.Value);
-                        }
-                        else
-                        {
-                            command.Parameters.AddWithValue("@dateOfBirth", userInfo.DateOfBirth);
-                        }
+                    if (userInfo.DateOfBirth == null)
+                    {
+                        command.Parameters.AddWithValue("@dateOfBirth", DBNull.Value);
+                    }
+                    else
+                    {
+                        command.Parameters.AddWithValue("@dateOfBirth", userInfo.DateOfBirth);
+                    }
 
-                        if (userInfo.Avatar == null)
-                        {
-                            command.Parameters.Add(
-                                new SqlParameter("@avatar", SqlDbType.VarBinary) {Value = DBNull.Value});
-                        }
-                        else
-                        {
-                            var avatar =
-                                new SqlParameter("@avatar", SqlDbType.VarBinary, userInfo.Avatar.Length)
-                                    {Value = userInfo.Avatar};
-                            command.Parameters.Add(avatar);
-                        }
+                    if (userInfo.Avatar == null)
+                    {
+                        command.Parameters.Add(
+                            new SqlParameter("@avatar", SqlDbType.VarBinary) {Value = DBNull.Value});
+                    }
+                    else
+                    {
+                        var avatar =
+                            new SqlParameter("@avatar", SqlDbType.VarBinary, userInfo.Avatar.Length)
+                                {Value = userInfo.Avatar};
+                        command.Parameters.Add(avatar);
+                    }
 
+                    try
+                    {
                         command.ExecuteNonQuery();
                     }
+                    catch (SqlException)
+                    {
+                        throw new ArgumentException(nameof(userId));
+                    }
                 }
-            }
-            catch (SqlException)
-            {
-                throw new ArgumentException(nameof(userId));
             }
         }
         /// <inheritdoc />
@@ -351,34 +351,33 @@ namespace DotNetMessenger.DataLayer.SqlServer
             if (user.Id == 0)
                 throw new ArgumentException(nameof(user.Id));
 
-            try
+            using (var connection = new SqlConnection(_connectionString))
             {
-                using (var connection = new SqlConnection(_connectionString))
+                connection.Open();
+
+                // check if id already exists
+                if (!SqlHelper.DoesFieldValueExist(connection, "Users", "ID", user.Id, SqlDbType.Int))
+                    throw new ArgumentException(nameof(user.Id));
+                using (var command = connection.CreateCommand())
                 {
-                    connection.Open();
+                    command.CommandText = "UPDATE [Users] SET [Username] = @userName WHERE [ID] = @userId";
 
-                    // check if id already exists
-                    if (!SqlHelper.DoesFieldValueExist(connection, "Users", "ID", user.Id, SqlDbType.Int))
-                        throw new ArgumentException(nameof(user.Id));
-                    using (var command = connection.CreateCommand())
+                    command.Parameters.AddWithValue("@userId", user.Id);
+                    command.Parameters.AddWithValue("@userName", user.Username);
+
+                    try
                     {
-                        command.CommandText = "UPDATE [Users] SET [Username] = @userName WHERE [ID] = @userId";
-
-                        command.Parameters.AddWithValue("@userId", user.Id);
-                        command.Parameters.AddWithValue("@userName", user.Username);
-
                         command.ExecuteNonQuery();
-
-                        if (user.UserInfo != null)
-                            SetUserInfo(user.Id, user.UserInfo);
-                        return user;
+                    }
+                    catch (SqlException)
+                    {
+                        throw new UserAlreadyExistsException();
                     }
 
+                    if (user.UserInfo != null)
+                        SetUserInfo(user.Id, user.UserInfo);
+                    return user;
                 }
-            }
-            catch (SqlException)
-            {
-                throw new UserAlreadyExistsException();
             }
         }
         /// <inheritdoc />
