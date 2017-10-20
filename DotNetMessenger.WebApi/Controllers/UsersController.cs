@@ -8,6 +8,7 @@ using System.Web.Http;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
+using DotNetMessenger.WebApi.Filters;
 using DotNetMessenger.WebApi.Models;
 
 namespace DotNetMessenger.WebApi.Controllers
@@ -17,6 +18,7 @@ namespace DotNetMessenger.WebApi.Controllers
     {
         [Route("{id:int}")]
         [HttpGet]
+        [TokenAuthentication]
         public User GetUserById(int id)
         {
             var user = RepositoryBuilder.UsersRepository.GetUser(id);
@@ -63,6 +65,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("")]
         [HttpPost]
+        [AllowAnonymous]
         public User CreateUser([FromBody] UserCredentials userCredentials)
         {
             try
