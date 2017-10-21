@@ -261,6 +261,9 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.ExecuteNonQuery();
                     }
 
+                    if (chatType != ChatTypes.Dialog)
+                        SetChatSpecificRole(userIds[0], chat.Id, UserRoles.Moderator);
+
                     scope.Complete();
                     return chat;
                 }
@@ -601,28 +604,38 @@ namespace DotNetMessenger.DataLayer.SqlServer
             if (newCreator == 0)
                 throw new ArgumentException();
 
-            using (var connection = new SqlConnection(_connectionString))
+            using (var scope = new TransactionScope())
             {
-                connection.Open();
-                // check if the chat exists
-                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
-                    throw new ArgumentException();
-                // check if chat is dialog
-                if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType", (int)ChatTypes.Dialog))
-                    throw new ChatTypeMismatchException();
-                // check if user is in chat
-                if (!SqlHelper.DoesDoubleKeyExist(connection, "ChatUsers", "UserID", newCreator, "ChatID", chatId))
-                    throw new ArgumentException();
+                var chat = GetChat(chatId);
 
-                using (var command = connection.CreateCommand())
+                using (var connection = new SqlConnection(_connectionString))
                 {
-                    command.CommandText = "UPDATE [Chats] SET [CreatorID] = @newCreator WHERE [ID] = @chatId";
+                    connection.Open();
+                    // check if the chat exists
+                    if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                        throw new ArgumentException();
+                    // check if chat is dialog
+                    if (SqlHelper.DoesDoubleKeyExist(connection, "Chats", "ID", chatId, "ChatType",
+                        (int) ChatTypes.Dialog))
+                        throw new ChatTypeMismatchException();
+                    // check if user is in chat
+                    if (!SqlHelper.DoesDoubleKeyExist(connection, "ChatUsers", "UserID", newCreator, "ChatID", chatId))
+                        throw new ArgumentException();
 
-                    command.Parameters.AddWithValue("@chatId", chatId);
-                    command.Parameters.AddWithValue("@newCreator", newCreator);
+                    using (var command = connection.CreateCommand())
+                    {
+                        command.CommandText = "UPDATE [Chats] SET [CreatorID] = @newCreator WHERE [ID] = @chatId";
 
-                    command.ExecuteNonQuery();
+                        command.Parameters.AddWithValue("@chatId", chatId);
+                        command.Parameters.AddWithValue("@newCreator", newCreator);
+
+                        command.ExecuteNonQuery();
+                    }
                 }
+
+                SetChatSpecificRole(newCreator, chatId, UserRoles.Moderator);
+
+                scope.Complete();
             }
         }
         /// <inheritdoc />
@@ -691,11 +704,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         chatUserInfo.Role = new UserRole
                         {
                             RoleType = (UserRoles)roleId,
-                            ReadPerm = reader.GetBoolean(reader.GetOrdinal("ReadPerm")),
-                            WritePerm = reader.GetBoolean(reader.GetOrdinal("WritePerm")),
-                            ChatInfoPerm = reader.GetBoolean(reader.GetOrdinal("ChatInfoPerm")),
-                            AttachPerm = reader.GetBoolean(reader.GetOrdinal("AttachPerm")),
-                            ManageUsersPerm = reader.GetBoolean(reader.GetOrdinal("ManageUsersPerm")),
+                            RolePermissions = (reader.GetBoolean(reader.GetOrdinal("WritePerm")) ? RolePermissions.WritePerm : RolePermissions.NaN) |
+                                                (reader.GetBoolean(reader.GetOrdinal("ReadPerm")) ? RolePermissions.ReadPerm : RolePermissions.NaN) |
+                                                (reader.GetBoolean(reader.GetOrdinal("ChatInfoPerm")) ? RolePermissions.ChatInfoPerm : RolePermissions.NaN) |
+                                                (reader.GetBoolean(reader.GetOrdinal("AttachPerm")) ? RolePermissions.AttachPerm : RolePermissions.NaN) |
+                                                (reader.GetBoolean(reader.GetOrdinal("ManageUsersPerm")) ? RolePermissions.ManageUsersPerm : RolePermissions.NaN),
                             RoleName = reader.GetString(reader.GetOrdinal("Name"))
                         };
                     }
@@ -824,6 +837,40 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         throw new ArgumentException();
                     }
                     return GetChatSpecificInfo(userId, chatId);
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Gets the user role given its id
+        /// </summary>
+        /// <returns>Object representing the user role</returns>
+        public UserRole GetUserRole(UserRoles roleId)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT [Name], [ReadPerm], [WritePerm], [ChatInfoPerm], [AttachPerm], [ManageUsersPerm]" +
+                                          " FROM [UserRoles] WHERE [ID] = @roleId";
+                    command.Parameters.AddWithValue("@roleId", (int)roleId);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            throw new ArgumentException();
+                        reader.Read();
+                        return  new UserRole
+                        {
+                            RoleType = 0,
+                            RolePermissions = (reader.GetBoolean(reader.GetOrdinal("WritePerm")) ? RolePermissions.WritePerm : RolePermissions.NaN) |
+                                              (reader.GetBoolean(reader.GetOrdinal("ReadPerm")) ? RolePermissions.ReadPerm : RolePermissions.NaN) |
+                                              (reader.GetBoolean(reader.GetOrdinal("ChatInfoPerm")) ? RolePermissions.ChatInfoPerm : RolePermissions.NaN) |
+                                              (reader.GetBoolean(reader.GetOrdinal("AttachPerm")) ? RolePermissions.AttachPerm : RolePermissions.NaN) |
+                                              (reader.GetBoolean(reader.GetOrdinal("ManageUsersPerm")) ? RolePermissions.ManageUsersPerm : RolePermissions.NaN),
+                            RoleName = reader.GetString(reader.GetOrdinal("Name"))
+                        };
+                    }
                 }
             }
         }

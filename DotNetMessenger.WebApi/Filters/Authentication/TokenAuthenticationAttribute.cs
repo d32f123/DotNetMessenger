@@ -8,7 +8,7 @@ using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Principals;
 using DotNetMessenger.WebApi.Results;
 
-namespace DotNetMessenger.WebApi.Filters
+namespace DotNetMessenger.WebApi.Filters.Authentication
 {
     public class TokenAuthenticationAttribute : Attribute, IAuthenticationFilter
     {

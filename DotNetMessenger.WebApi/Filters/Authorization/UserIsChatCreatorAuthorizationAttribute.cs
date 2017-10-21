@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -7,7 +8,7 @@ using System.Web.Http.Filters;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.WebApi.Principals;
 
-namespace DotNetMessenger.WebApi.Filters
+namespace DotNetMessenger.WebApi.Filters.Authorization
 {
     public class UserIsChatCreatorAuthorizationAttribute : AuthorizationFilterAttribute
     {
@@ -22,24 +23,37 @@ namespace DotNetMessenger.WebApi.Filters
             try
             {
                 if (string.IsNullOrEmpty(RegexString))
+                {
                     Challenge(actionContext);
+                    return;
+                }
 
                 // extract string matching regex
                 var r = new Regex(RegexString);
                 var m = r.Match(actionContext.Request.RequestUri.AbsolutePath);
                 // if there is any content
-                if (!m.Success) Challenge(actionContext);
-                // parse it to user id
+                if (!m.Success)
+                {
+                    Challenge(actionContext);
+                    return;
+                }
+                // parse it to chat id
                 var chatId = int.Parse(m.Groups[1].Value);
 
                 // get principal
                 var principal = Thread.CurrentPrincipal as UserPrincipal;
                 if (principal == null)
+                {
                     Challenge(actionContext);
+                    return;
+                }
 
-                // check if principal user id is the same as the id extracted from uri
+                // check if the user is the creator
                 if (RepositoryBuilder.ChatsRepository.GetChat(chatId).CreatorId != principal.UserId)
+                {
                     Challenge(actionContext);
+                    return;
+                }
                 base.OnAuthorization(actionContext);
             }
             catch

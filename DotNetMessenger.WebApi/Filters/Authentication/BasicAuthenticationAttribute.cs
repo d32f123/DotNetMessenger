@@ -6,7 +6,8 @@ using System.Web;
 using System.Web.Http.Filters;
 using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Results;
-namespace DotNetMessenger.WebApi.Filters
+
+namespace DotNetMessenger.WebApi.Filters.Authentication
 {
     public abstract class BasicAuthenticationAttribute : Attribute, IAuthenticationFilter
     {

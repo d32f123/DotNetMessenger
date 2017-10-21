@@ -123,9 +123,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             _tempChats.Add(chat.Id);
 
             // assert
@@ -220,9 +220,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             _tempChats.Add(chat.Id);
 
             // add user
@@ -241,9 +241,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateGroupChat(users.GetRange(0, 2).Select(x => x.Id), "newChat");
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateGroupChat(users.GetRange(0, 2).Select(x => x.Id), "newChat");
             _tempChats.Add(chat.Id);
 
             // add user
@@ -272,9 +272,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+
+            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
             _tempChats.Add(chat.Id);
 
             // add user
@@ -292,9 +293,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "newChat");
             _tempChats.Add(chat.Id);
 
             // add user
@@ -302,7 +303,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ThrowChatTypeMismatchException_When_AddUsersToCDialog()
+        public void Should_ThrowChatTypeMismatchException_When_AddUsersToDialog()
         {
             // arrange
             var usersCred = new List<UserCredentials>
@@ -313,9 +314,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             _tempChats.Add(chat.Id);
 
             // add user
@@ -333,10 +334,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
-
             users.ForEach(x => _tempUsers.Add(x.Id));
 
+
+            var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
             _chatsRepository.DeleteChat(chat.Id);
             chat = _chatsRepository.GetChat(chat.Id);
 
@@ -542,9 +543,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chatInfo = new ChatInfo { Title = "someTitle", Avatar = Encoding.UTF8.GetBytes("heyIamAnAvatar") };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             // assert
             Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.SetChatInfo(chat.Id, chatInfo));
         }
@@ -656,10 +657,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
 
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             // assert
             Assert.ThrowsException<ChatTypeMismatchException>(() =>_chatsRepository.SetCreator(chat.Id, users[1].Id));
             
@@ -753,10 +753,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
 
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             // assert
             Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.KickUser(chat.Id, users[1].Id));
         }
@@ -830,9 +829,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateDialog(users[0].Id, users[1].Id);
             // assert
             Assert.ThrowsException<ChatTypeMismatchException>(() => _chatsRepository.KickUsers(chat.Id, users.GetRange(1, 1).Select(x => x.Id)));
         }
@@ -916,10 +915,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             var listenerUser = _usersRepository.CreateUser(listenerUserCred.Username, listenerUserCred.Password);
             var regularUser = _usersRepository.CreateUser(regularUserCred.Username, regularUserCred.Password);
-            var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
-            
+
             _tempUsers.Add(listenerUser.Id);
             _tempUsers.Add(regularUser.Id);
+
+            var chat = _chatsRepository.CreateGroupChat(new[] { regularUser.Id, listenerUser.Id }, "newChat");
             _tempChats.Add(chat.Id);
 
             _chatsRepository.SetChatSpecificRole(listenerUser.Id, chat.Id, UserRoles.Listener);
@@ -928,9 +928,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             // assert
             Assert.AreEqual(listenerRole.RoleType, UserRoles.Listener);
-            Assert.AreEqual(regularRole.RoleType, UserRoles.Regular);
-            Assert.IsFalse(listenerRole.WritePerm);
-            Assert.IsTrue(regularRole.WritePerm);
+            Assert.AreEqual(regularRole.RoleType, UserRoles.Moderator);
+            Assert.IsFalse((listenerRole.RolePermissions & RolePermissions.WritePerm) == RolePermissions.WritePerm);
+            Assert.IsTrue((regularRole.RolePermissions & RolePermissions.WritePerm) == RolePermissions.WritePerm);
         }
 
         [TestMethod]
@@ -1006,7 +1006,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             // assert
             Assert.AreEqual(moderatorRole.RoleType, UserRoles.Moderator);
-            Assert.IsTrue(moderatorRole.ManageUsersPerm);
+            Assert.IsTrue((moderatorRole.RolePermissions & RolePermissions.ManageUsersPerm) != 0);
         }
 
         [TestMethod]

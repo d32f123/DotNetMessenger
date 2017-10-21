@@ -4,7 +4,7 @@ using System.Threading;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.WebApi.Principals;
 
-namespace DotNetMessenger.WebApi.Filters
+namespace DotNetMessenger.WebApi.Filters.Authentication
 {
     public class UserBasicAuthenticationAttribute : BasicAuthenticationAttribute
     {

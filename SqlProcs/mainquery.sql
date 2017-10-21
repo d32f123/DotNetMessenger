@@ -9,6 +9,7 @@
  DROP TABLE IF EXISTS [Chats];
  DROP TABLE IF EXISTS [ChatTypes];
  DROP TABLE IF EXISTS [UserInfos];
+ DROP TABLE IF EXISTS [Tokens];
  DROP TABLE IF EXISTS [Users];
  IF EXISTS (SELECT * FROM [sys].[fulltext_catalogs] WHERE name='CG_Messages') 
 	DROP FULLTEXT CATALOG [CG_Messages];

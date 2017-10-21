@@ -62,7 +62,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.Parameters.AddWithValue("@hash", hash);
 
                         var id = (int) command.ExecuteScalar();
-                        user = new UserSqlProxy {Chats = null, Id = id, UserInfo = null, Username = userName};
+                        user = new UserSqlProxy {Id = id, Username = userName};
                     }
 
                     // make entry in userinfos table

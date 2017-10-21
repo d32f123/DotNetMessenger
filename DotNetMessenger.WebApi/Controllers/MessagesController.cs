@@ -6,22 +6,41 @@ using System.Net.Http;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.Model;
+using DotNetMessenger.WebApi.Filters.Authentication;
+using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Models;
 
 namespace DotNetMessenger.WebApi.Controllers
 {
     [RoutePrefix("api/messages")]
+    [TokenAuthentication]
+    [Authorize]
     public class MessagesController : ApiController
     {
+        private const string RegexString = @".*\/messages\/([^\/]+)\/?";
+
         [Route("{chatId:int}/{userId:int}")]
         [HttpPost]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.WritePerm)]
         public Message StoreMessage(int chatId, int userId, [FromBody] Message message)
         {
             try
             {
+                // if no attach permissions and attachments are not empty
+                if ((RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId).Role.RolePermissions &
+                     RolePermissions.AttachPerm) == 0 &&
+                    (message.Attachments == null || message.Attachments.Count() != 0))
+                {
+                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized,
+                        "Not enough permissions"));
+                    
+                }
                 if (message.ExpirationDate == null)
+                {
                     return RepositoryBuilder.MessagesRepository.StoreMessage(userId, chatId, message.Text,
                         message.Attachments);
+                    
+                }
                 return RepositoryBuilder.MessagesRepository.StoreTemporaryMessage(userId, chatId, message.Text,
                     (DateTime)message.ExpirationDate, message.Attachments);
             }
@@ -39,17 +58,30 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{messageId:int}")]
         [HttpGet]
+        [MessageFromChatUserAuthorization(RegexString = RegexString)]
         public Message GetMessage(int messageId)
         {
-            var message = RepositoryBuilder.MessagesRepository.GetMessage(messageId);
-            if (message != null)
+            try
+            {
+                var message = RepositoryBuilder.MessagesRepository.GetMessage(messageId);
+                if (message == null)
+                {
+                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
+                        "Id is invalid"));
+                }
+
                 return message;
-            throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                "Id is invalid"));
+            }
+            catch (ArgumentException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
+                    "Id is invalid"));
+            }
         }
 
         [Route("{messageId:int}/attachments")]
         [HttpGet]
+        [MessageFromChatUserAuthorization(RegexString = RegexString)]
         public IEnumerable<Attachment> GetMessageAttachments(int messageId)
         {
             try
@@ -67,6 +99,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{messageId:int}/expirationdate")]
         [HttpGet]
+        [MessageFromChatUserAuthorization(RegexString = RegexString)]
         public DateTime? GetMessageExpirationDate(int messageId)
         {
             try
@@ -82,6 +115,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("chats/{chatId:int}")]
         [HttpGet]
+        [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
         public IEnumerable<Message> GetChatMessages(int chatId)
         {
             try
@@ -99,6 +133,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("chats/{chatId:int}/bydate")]
         [HttpGet]
+        [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
         public IEnumerable<Message> GetChatMessagesInRange(int chatId, [FromUri] DateRange dateRange)
         {
             try
@@ -117,6 +152,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("chats/{chatId:int}/bystring")]
         [HttpGet]
+        [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
         public IEnumerable<Message> SearchMessagesInChat(int chatId, [FromUri] string searchString)
         {
             try

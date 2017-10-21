@@ -503,9 +503,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             // assert
             Assert.AreEqual(listenerUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Listener);
-            Assert.AreEqual(regularUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Regular);
-            Assert.IsFalse(listenerUser.ChatUserInfos.Single().Role.WritePerm);
-            Assert.IsTrue(regularUser.ChatUserInfos.Single().Role.WritePerm);
+            Assert.AreEqual(regularUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Moderator);
+            Assert.IsFalse((listenerUser.ChatUserInfos.Single().Role.RolePermissions & RolePermissions.WritePerm) != 0);
+            Assert.IsTrue((regularUser.ChatUserInfos.Single().Role.RolePermissions & RolePermissions.WritePerm) != 0);
     }
 
         [TestCleanup]

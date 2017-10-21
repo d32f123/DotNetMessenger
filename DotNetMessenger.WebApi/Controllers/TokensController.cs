@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
-using DotNetMessenger.WebApi.Filters;
+using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Controllers

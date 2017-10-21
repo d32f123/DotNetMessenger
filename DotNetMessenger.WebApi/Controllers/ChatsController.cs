@@ -9,7 +9,8 @@ using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
-using DotNetMessenger.WebApi.Filters;
+using DotNetMessenger.WebApi.Filters.Authentication;
+using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Models;
 using DotNetMessenger.WebApi.Principals;
 
@@ -23,7 +24,7 @@ namespace DotNetMessenger.WebApi.Controllers
         private const string RegexString = @".*\/chats\/([^\/]+)\/?";
         [Route("{id:int}")]
         [HttpGet]
-        [UserIsInChatAuthorization(RegexString = RegexString)]
+        [ChatUserAuthorization(RegexString = RegexString)]
         public Chat GetChatById(int id)
         {
             var chat = RepositoryBuilder.ChatsRepository.GetChat(id);
@@ -92,7 +93,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{id:int}/info")]
         [HttpGet]
-        [UserIsInChatAuthorization(RegexString = RegexString)]
+        [ChatUserAuthorization(RegexString = RegexString)]
         public ChatInfo GetChatInfo(int id)
         {
             try
@@ -113,7 +114,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{id:int}/info")]
         [HttpDelete]
-        [UserIsChatCreatorAuthorization(RegexString = RegexString)]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
         public void DeleteChatInfo(int id)
         {
             try
@@ -131,9 +132,10 @@ namespace DotNetMessenger.WebApi.Controllers
                     "No such chat exists"));
             }
         }
-        /* TODO: ADD ROLES TO USERPRINCIPAL AND AUTHORIZATION FILTER BASED ON ROLE */
+
         [Route("{id:int}/info")]
         [HttpPut]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
         public void SetChatInfo(int id, [FromBody] ChatInfo chatInfo)
         {
             try
@@ -159,6 +161,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{id:int}/users")]
         [HttpGet]
+        [ChatUserAuthorization(RegexString = RegexString)]
         public User[] GetChatUsers(int id)
         {
             try
@@ -176,6 +179,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}")]
         [HttpPost]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void AddUser(int chatId, int userId)
         {
             try
@@ -196,6 +200,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}")]
         [HttpDelete]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void KickUser(int chatId, int userId)
         {
             try
@@ -221,6 +226,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users")]
         [HttpPost]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void AddUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {
             try
@@ -246,6 +252,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users")]
         [HttpDelete]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void KickUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {
             try
@@ -276,6 +283,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/creator/{userId:int}")]
         [HttpPut]
+        [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void SetCreator(int chatId, int userId)
         {
             try
@@ -296,6 +304,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}/info")]
         [HttpGet]
+        [ChatUserAuthorization(RegexString = RegexString)]
         public ChatUserInfo GetChatSpecificUserInfo(int chatId, int userId)
         {
             try
@@ -316,6 +325,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}/info")]
         [HttpDelete]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void DeleteChatSpecificUserInfo(int chatId, int userId)
         {
             try
@@ -341,6 +351,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}/info")]
         [HttpPut]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void SetChatSpecificUserInfo(int chatId, int userId, [FromBody] ChatUserInfo chatUserInfo)
         {
             try
@@ -366,6 +377,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{chatId:int}/users/{userId:int}/info/role/{roleId:int}")]
         [HttpPut]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public ChatUserInfo SetChatSpecificUserRole(int chatId, int userId, int roleId)
         {
             try

@@ -94,13 +94,15 @@
     <Compile Include="Controllers\UsersController.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\HttpAuthenticationChallengeContextExtensions.cs" />
-    <Compile Include="Filters\BasicAuthenticationAttribute.cs" />
-    <Compile Include="Filters\TokenAuthenticationAttribute.cs" />
-    <Compile Include="Filters\UserBasicAuthenticationAttribute.cs" />
-    <Compile Include="Filters\UserIdIsIdFromUriAuthorizationAttribute.cs" />
-    <Compile Include="Filters\UserIsChatCreatorAuthorizationAttribute.cs" />
-    <Compile Include="Filters\UserIsInChatAuthorizationAttribute.cs" />
-    <Compile Include="Filters\UserNameIsNameFromUriAuthorizationAttribute.cs" />
+    <Compile Include="Filters\Authentication\BasicAuthenticationAttribute.cs" />
+    <Compile Include="Filters\Authentication\TokenAuthenticationAttribute.cs" />
+    <Compile Include="Filters\Authentication\UserBasicAuthenticationAttribute.cs" />
+    <Compile Include="Filters\Authorization\ChatUserAuthorizationAttribute.cs" />
+    <Compile Include="Filters\Authorization\MessageFromChatUserAuthorizationAttribute.cs" />
+    <Compile Include="Filters\Authorization\UserIdIsIdFromUriAuthorizationAttribute.cs" />
+    <Compile Include="Filters\Authorization\UserIsChatCreatorAuthorizationAttribute.cs" />
+    <Compile Include="Filters\Authorization\UserIsInChatAuthorizationAttribute.cs" />
+    <Compile Include="Filters\Authorization\UserNameIsNameFromUriAuthorizationAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>

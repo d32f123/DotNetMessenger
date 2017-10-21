@@ -1,4 +1,5 @@
-﻿using DotNetMessenger.Model.Enums;
+﻿using System;
+using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.Model
 {
@@ -11,13 +12,16 @@ namespace DotNetMessenger.Model
     {
         public UserRoles RoleType { get; set; }
         public string RoleName { get; set; }
-        public bool ReadPerm { get; set; }
-        public bool WritePerm { get; set; }
-        // Whether a user can edit topic, avatar of the chat et c. or not
-        public bool ChatInfoPerm { get; set; }
-        // Whether a user can send attachments or not
-        public bool AttachPerm { get; set; }
-        // Whether a user can kick/add users or not
-        public bool ManageUsersPerm { get; set; }
+        public RolePermissions RolePermissions;
+    }
+    [Flags]
+    public enum RolePermissions
+    {
+        NaN = 0,
+        ReadPerm = 1,
+        WritePerm = 2,
+        ChatInfoPerm = 4,
+        AttachPerm = 8,
+        ManageUsersPerm = 16
     }
 }

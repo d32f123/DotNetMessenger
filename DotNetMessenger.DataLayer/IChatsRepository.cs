@@ -126,6 +126,11 @@ namespace DotNetMessenger.DataLayer
         /// <returns>Null if invalid id, else info regarding the user</returns>
         ChatUserInfo SetChatSpecificRole(int userId, int chatId, UserRoles userRole);
         /// <summary>
+        /// Gets the user role given its id
+        /// </summary>
+        /// <returns>Object representing the user role</returns>
+        UserRole GetUserRole(UserRoles roleId);
+        /// <summary>
         /// Deletes information regarding a specific user and a chat
         /// </summary>
         /// <param name="userId">The id of the user</param>

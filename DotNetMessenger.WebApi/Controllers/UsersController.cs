@@ -9,7 +9,8 @@ using System.Web.Http;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
-using DotNetMessenger.WebApi.Filters;
+using DotNetMessenger.WebApi.Filters.Authentication;
+using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Models;
 using DotNetMessenger.WebApi.Principals;
 
