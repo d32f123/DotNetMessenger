@@ -6,6 +6,10 @@ using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authentication
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Checks DB against the given username and password. Checks if combination is allowed.
+    /// </summary>
     public class UserBasicAuthenticationAttribute : BasicAuthenticationAttribute
     {
         protected override IPrincipal Authenticate(string userName, string password, CancellationToken cancellationToken)

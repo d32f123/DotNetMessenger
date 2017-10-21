@@ -22,6 +22,12 @@ namespace DotNetMessenger.WebApi.Controllers
     public class ChatsController : ApiController
     {
         private const string RegexString = @".*\/chats\/([^\/]+)\/?";
+
+        /// <summary>
+        /// Gets chat information by its id. User must be in chat
+        /// </summary>
+        /// <param name="id">The id of the chat</param>
+        /// <returns>All chat information</returns>
         [Route("{id:int}")]
         [HttpGet]
         [ChatUserAuthorization(RegexString = RegexString)]
@@ -32,7 +38,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No chat found"));
             return chat;
         }
-
+        /// <summary>
+        /// Creates a new chat. List of users must include the sender
+        /// </summary>
+        /// <param name="chatCredentials">Chat title and members</param>
+        /// <returns><see cref="Chat"/> object</returns>
         [Route("")]
         [HttpPost]
         public Chat CreateChat([FromBody] ChatCredentials chatCredentials)
@@ -74,7 +84,10 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Some users are invalid"));
             }
         }
-
+        /// <summary>
+        /// Deletes chat. User must be the creator of the chat
+        /// </summary>
+        /// <param name="id">Chat's id</param>
         [Route("{id:int}")]
         [HttpDelete]
         [UserIsChatCreatorAuthorization(RegexString = RegexString)]
@@ -90,7 +103,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "No such chat exists"));
             }
         }
-
+        /// <summary>
+        /// Gets chat information (title et c.). User must be in chat
+        /// </summary>
+        /// <param name="id">The id of the chat</param>
+        /// <returns>Title, avatar et c.</returns>
         [Route("{id:int}/info")]
         [HttpGet]
         [ChatUserAuthorization(RegexString = RegexString)]
@@ -111,7 +128,10 @@ namespace DotNetMessenger.WebApi.Controllers
                     "No such chat exists"));
             }
         }
-
+        /// <summary>
+        /// Deletes chat information. User must have <see cref="RolePermissions.ChatInfoPerm"/>
+        /// </summary>
+        /// <param name="id">The id of the chat</param>
         [Route("{id:int}/info")]
         [HttpDelete]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
@@ -132,7 +152,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "No such chat exists"));
             }
         }
-
+        /// <summary>
+        /// Set's information for the chat. User must have <see cref="RolePermissions.ChatInfoPerm"/> permissions
+        /// </summary>
+        /// <param name="id">The id of the chat</param>
+        /// <param name="chatInfo">Information to be set</param>
         [Route("{id:int}/info")]
         [HttpPut]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
@@ -158,7 +182,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Gets a chat's members. User performing the request must be in chat
+        /// </summary>
+        /// <param name="id">The id of the chat</param>
+        /// <returns>Chat's members</returns>
         [Route("{id:int}/users")]
         [HttpGet]
         [ChatUserAuthorization(RegexString = RegexString)]
@@ -176,7 +204,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "No such chat exists"));
             }
         }
-
+        /// <summary>
+        /// Adds a user to the chat. User performing the request must have <see cref="RolePermissions.ManageUsersPerm"/> permission
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the new member</param>
         [Route("{chatId:int}/users/{userId:int}")]
         [HttpPost]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -197,7 +229,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Kicks a user from the chat. User performing the request must have <see cref="RolePermissions.ManageUsersPerm"/> permission
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the kicked member</param>
         [Route("{chatId:int}/users/{userId:int}")]
         [HttpDelete]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -223,7 +259,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Cannot kick creator"));
             }
         }
-
+        /// <summary>
+        /// Adds a list of users to a given chat. User making the request must have <see cref="RolePermissions.ManageUsersPerm"/> permission
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userIds">List of users to be added</param>
         [Route("{chatId:int}/users")]
         [HttpPost]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -249,7 +289,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Kicks a list of users from a given chat. User making the request must have <see cref="RolePermissions.ManageUsersPerm"/> permission
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userIds">List of users to be kicked</param>
         [Route("{chatId:int}/users")]
         [HttpDelete]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -280,7 +324,12 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Cannot kick creator"));
             }
         }
-
+        /// <summary>
+        /// Sets a new creator for the chat. User performing the request must be the current creator 
+        /// and the new creator must already be in chat
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the user that will be the new creator</param>
         [Route("{chatId:int}/users/creator/{userId:int}")]
         [HttpPut]
         [UserIsChatCreatorAuthorization(RegexString = RegexString)]
@@ -301,7 +350,12 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Gets nickname and user role of a given user in a given chat. User performing the request must be in chat
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the user</param>
+        /// <returns>Information about the user specific to the given chat</returns>
         [Route("{chatId:int}/users/{userId:int}/info")]
         [HttpGet]
         [ChatUserAuthorization(RegexString = RegexString)]
@@ -322,7 +376,11 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Deletes user info for the specified user. User performing the request must have <see cref="RolePermissions.ManageUsersPerm"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the user</param>
         [Route("{chatId:int}/users/{userId:int}/info")]
         [HttpDelete]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -348,7 +406,12 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Sets user info for specified user. User performing the request must have <see cref="RolePermissions.ManageUsersPerm"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the user</param>
+        /// <param name="chatUserInfo">New information for the user</param>
         [Route("{chatId:int}/users/{userId:int}/info")]
         [HttpPut]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -374,7 +437,13 @@ namespace DotNetMessenger.WebApi.Controllers
                     "Chat cannot be dialog"));
             }
         }
-
+        /// <summary>
+        /// Sets user role for specified user. User performing the request must have <see cref="RolePermissions.ManageUsersPerm"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="userId">The id of the user</param>
+        /// <param name="roleId">New role id</param>
+        /// <returns>Updated user information</returns>
         [Route("{chatId:int}/users/{userId:int}/info/role/{roleId:int}")]
         [HttpPut]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
@@ -398,6 +467,77 @@ namespace DotNetMessenger.WebApi.Controllers
             {
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Forbidden,
                     "Incorrect role"));
+            }
+        }
+        /// <summary>
+        /// Sets given user information (title and avatar) for the specified chat (does not set role at any circumstance).
+        /// User performing the request must be in chat
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="chatUserInfo">New information</param>
+        [Route("{chatId:int}/users/current/info")]
+        [HttpPut]
+        [ChatUserAuthorization(RegexString = RegexString)]
+        public void SetChatUserInfoForCurrentUser(int chatId, [FromBody] ChatUserInfo chatUserInfo)
+        {
+            if (!(Thread.CurrentPrincipal is UserPrincipal))
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
+                    "Server broken"));
+            var principal = (UserPrincipal)Thread.CurrentPrincipal;
+            try
+            {
+                RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(principal.UserId, chatId, chatUserInfo);
+            }
+            catch (ArgumentNullException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
+                    "No info provided"));
+            }
+            catch (ArgumentException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
+                    "No such chat or user exists or user is not in chat"));
+            }
+            catch (ChatTypeMismatchException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
+                    "Chat cannot be dialog"));
+            }
+        }
+        /// <summary>
+        /// Clears nickname for the current user. User performing the request must be in chat
+        /// </summary>
+        /// <param name="chatId">The id of the user</param>
+        [Route("{chatId:int}/users/current/info")]
+        [HttpDelete]
+        [ChatUserAuthorization(RegexString = RegexString)]
+        public void ClearChatUserInfoForCurrentUser(int chatId)
+        {
+            if (!(Thread.CurrentPrincipal is UserPrincipal))
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
+                    "Server broken"));
+            var principal = (UserPrincipal)Thread.CurrentPrincipal;
+            try
+            {
+                RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(principal.UserId, chatId, new ChatUserInfo
+                {
+                    Nickname = null, Role = null
+                });
+            }
+            catch (ArgumentNullException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
+                    "No info provided"));
+            }
+            catch (ArgumentException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
+                    "No such chat or user exists or user is not in chat"));
+            }
+            catch (ChatTypeMismatchException)
+            {
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
+                    "Chat cannot be dialog"));
             }
         }
     }

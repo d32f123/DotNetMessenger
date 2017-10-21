@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -9,6 +8,12 @@ using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authorization
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Checks that the user making the request has the same username as is
+    /// specified in the URI. Username is extracted using
+    /// <see cref="P:DotNetMessenger.WebApi.Filters.Authorization.UserNameIsNameFromUriAuthorizationAttribute.RegexString" />
+    /// </summary>
     public class UserNameIsNameFromUriAuthorizationAttribute : AuthorizationFilterAttribute
     {
         public override bool AllowMultiple => false;

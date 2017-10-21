@@ -12,6 +12,11 @@ using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authorization
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Checks whether the user is in the same chat as the message.
+    /// MessageId is extracted from the URI using <see cref="P:DotNetMessenger.WebApi.Filters.Authorization.MessageFromChatUserAuthorizationAttribute.RegexString" />
+    /// </summary>
     public class MessageFromChatUserAuthorizationAttribute : AuthorizationFilterAttribute
     {
         public override bool AllowMultiple => false;

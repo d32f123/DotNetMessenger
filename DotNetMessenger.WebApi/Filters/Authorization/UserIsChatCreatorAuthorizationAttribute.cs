@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -10,6 +9,11 @@ using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authorization
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Checks whether the user has the same userId as the creator of the chat.
+    /// ChatId is extracted from the URI using <see cref="P:DotNetMessenger.WebApi.Filters.Authorization.UserIsChatCreatorAuthorizationAttribute.RegexString" />
+    /// </summary>
     public class UserIsChatCreatorAuthorizationAttribute : AuthorizationFilterAttribute
     {
         public override bool AllowMultiple => false;

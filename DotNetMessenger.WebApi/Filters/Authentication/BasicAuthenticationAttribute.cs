@@ -9,6 +9,12 @@ using DotNetMessenger.WebApi.Results;
 
 namespace DotNetMessenger.WebApi.Filters.Authentication
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Reads Base64 string, converts it to username and password pair and executes 
+    /// <see cref="M:DotNetMessenger.WebApi.Filters.Authentication.BasicAuthenticationAttribute.Authenticate(System.String,System.String,System.Threading.CancellationToken)" /> method
+    /// for further authentication
+    /// </summary>
     public abstract class BasicAuthenticationAttribute : Attribute, IAuthenticationFilter
     {
         public string Realm { get; set; }

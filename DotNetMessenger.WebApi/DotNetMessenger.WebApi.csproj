@@ -101,7 +101,6 @@
     <Compile Include="Filters\Authorization\MessageFromChatUserAuthorizationAttribute.cs" />
     <Compile Include="Filters\Authorization\UserIdIsIdFromUriAuthorizationAttribute.cs" />
     <Compile Include="Filters\Authorization\UserIsChatCreatorAuthorizationAttribute.cs" />
-    <Compile Include="Filters\Authorization\UserIsInChatAuthorizationAttribute.cs" />
     <Compile Include="Filters\Authorization\UserNameIsNameFromUriAuthorizationAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>

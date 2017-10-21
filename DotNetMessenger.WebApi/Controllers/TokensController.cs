@@ -12,6 +12,10 @@ namespace DotNetMessenger.WebApi.Controllers
     [RoutePrefix("api/tokens")]
     public class TokensController : ApiController
     {
+        /// <summary>
+        /// Generates a new token for the user. Use basic authentication
+        /// </summary>
+        /// <returns>A new token for other API controllers</returns>
         [Route("")]
         [HttpPost]
         [UserBasicAuthentication]
@@ -31,7 +35,10 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
             }
         }
-
+        /// <summary>
+        /// Gets the user id from the token. Use token authentication
+        /// </summary>
+        /// <returns>User id</returns>
         [Route("")]
         [HttpGet]
         [TokenAuthentication]
@@ -44,7 +51,9 @@ namespace DotNetMessenger.WebApi.Controllers
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
             return principal.UserId;
         }
-
+        /// <summary>
+        /// Invalidates given token. Use on logout
+        /// </summary>
         [Route("")]
         [HttpDelete]
         [TokenAuthentication]

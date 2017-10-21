@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -10,6 +11,11 @@ using DotNetMessenger.WebApi.Results;
 
 namespace DotNetMessenger.WebApi.Filters.Authentication
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Reads Base64 string from auth header and converts it to a token
+    /// Sets <see cref="T:System.Security.Principal.IPrincipal" /> to the user using the token
+    /// </summary>
     public class TokenAuthenticationAttribute : Attribute, IAuthenticationFilter
     {
         public string Realm { get; set; }

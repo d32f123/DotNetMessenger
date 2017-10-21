@@ -21,6 +21,12 @@ namespace DotNetMessenger.WebApi.Controllers
     [Authorize]
     public class UsersController : ApiController
     {
+        /// <summary>
+        /// Gets information about the specified user.
+        /// If user performing the request is not the same as <paramref name="id"/> then chats and chatuserinfos fields are null
+        /// </summary>
+        /// <param name="id">The id of the user</param>
+        /// <returns>Information about the user</returns>
         [Route("{id:int}")]
         [HttpGet]
         public User GetUserById(int id)
@@ -35,11 +41,18 @@ namespace DotNetMessenger.WebApi.Controllers
 
             if (principal.UserId == id) return user;
 
+            // if the user performing the request is getting information about other user
+            // then we should not give out confidential info
             user.ChatUserInfos = null;
             user.Chats = null;
             return user;
         }
-
+        /// <summary>
+        /// Gets information about the specified user by username. If user performing the request is not the same as <paramref name="username"/>
+        /// then chats and chatuserinfos are set to null
+        /// </summary>
+        /// <param name="username">Username of the user</param>
+        /// <returns>Information about the user</returns>
         [Route("{username:length(6,50)}")]
         [HttpGet]
         public User GetUserByUsername(string username)
@@ -58,7 +71,11 @@ namespace DotNetMessenger.WebApi.Controllers
             user.Chats = null;
             return user;
         }
-
+        /// <summary>
+        /// Gets list of chats the user has. User performing the request must be the same as <paramref name="id"/>
+        /// </summary>
+        /// <param name="id">The id of the user</param>
+        /// <returns>Chats that the user is in</returns>
         [Route("{id:int}/chats")]
         [HttpGet]
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
@@ -75,7 +92,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
             }
         }
-
+        /// <summary>
+        /// Gets the list of chats the user is in. User performing tre request must be the same as <paramref name="username"/>
+        /// </summary>
+        /// <param name="username">Username of the user</param>
+        /// <returns>List of chats the user is in</returns>
         [Route("{username:length(6,50)}/chats")]
         [HttpGet]
         [UserNameIsNameFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
@@ -86,7 +107,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
             return RepositoryBuilder.ChatsRepository.GetUserChats(user.Id);
         }
-
+        /// <summary>
+        /// Creates a new user from <paramref name="userCredentials"/>. Does not require authentication.
+        /// </summary>
+        /// <param name="userCredentials">The credentials of the new user</param>
+        /// <returns><see cref="User"/> object representing the new user</returns>
         [Route("")]
         [HttpPost]
         [AllowAnonymous]
@@ -101,7 +126,10 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict, "User already exists"));
             }
         }
-
+        /// <summary>
+        /// Deletes user given their <paramref name="id"/>. User performing the request must be the same as <paramref name="id"/>
+        /// </summary>
+        /// <param name="id">Id of the user to be deleted</param>
         [Route("{id:int}")]
         [HttpDelete]
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
@@ -116,7 +144,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
         }
-
+        /// <summary>
+        /// Gets information about the user. 
+        /// </summary>
+        /// <param name="id">The id of the user</param>
+        /// <returns>Information abot the user (name, avatar et c.)</returns>
         [Route("{id:int}/userinfo")]
         [HttpGet]
         public UserInfo GetUserInfo(int id)
@@ -126,7 +158,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             return userInfo;
         }
-
+        /// <summary>
+        /// Deletes information about the specified user. User that is performing the request must be
+        /// the same as <paramref name="id"/>
+        /// </summary>
+        /// <param name="id">The id of the user</param>
         [Route("{id:int}/userinfo")]
         [HttpDelete]
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
@@ -141,7 +177,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
         }
-
+        /// <summary>
+        /// Sets information about the specified user. User that is performing the request must be the same as <paramref name="id"/>
+        /// </summary>
+        /// <param name="id">The id of the user</param>
+        /// <param name="userInfo">New information</param>
         [Route("{id:int}/userinfo")]
         [HttpPut]
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
@@ -160,7 +200,13 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
         }
-
+        /// <summary>
+        /// Updates user info (including username) about the user. User performing the request must be
+        /// the same as <paramref name="id"/>
+        /// </summary>
+        /// <param name="id">The id of the user</param>
+        /// <param name="user">New information about the user</param>
+        /// <returns>Updated information about the user</returns>
         [Route("{id:int}")]
         [HttpPut]
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
@@ -186,7 +232,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict, "User already exists"));
             }
         }
-
+        /// <summary>
+        /// Sets a new password for the user. User performing the request mustbe the same as <paramref name="id"/>
+        /// </summary>
+        /// <param name="id">The id of the user</param>
+        /// <param name="newPassword">New password of the user</param>
         [Route("{id:int}/password")]
         [HttpPut]
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]

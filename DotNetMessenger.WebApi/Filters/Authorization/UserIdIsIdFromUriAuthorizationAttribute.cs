@@ -9,6 +9,11 @@ using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authorization
 {
+    /// <inheritdoc />
+    /// <summary>
+    /// Checks that the user that is making the request has the same UserId
+    /// as is in the URI. UserId from URI is extracted using <see cref="P:DotNetMessenger.WebApi.Filters.Authorization.UserIdIsIdFromUriAuthorizationAttribute.RegexString" />
+    /// </summary>
     public class UserIdIsIdFromUriAuthorizationAttribute : AuthorizationFilterAttribute
     {
         public override bool AllowMultiple => false;
