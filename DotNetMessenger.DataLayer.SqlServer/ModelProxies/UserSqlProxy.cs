@@ -25,6 +25,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
                 _areChatsFetched = true;
                 return _chats;
             }
+            set
+            {
+                _areChatsFetched = true;
+                _chats = value;
+            }
         }
 
         public override UserInfo UserInfo
@@ -49,6 +54,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
                     .Select(x => RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(Id, x.Id));
                 _areChatUserInfosFetched = true;
                 return _chatUserInfos;
+            }
+            set
+            {
+                _areChatUserInfosFetched = true;
+                _chatUserInfos = value;
             }
         }
     }

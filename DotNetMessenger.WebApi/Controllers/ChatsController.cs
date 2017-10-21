@@ -3,20 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
+using DotNetMessenger.WebApi.Filters;
 using DotNetMessenger.WebApi.Models;
+using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Controllers
 {
     [RoutePrefix("api/chats")]
+    [TokenAuthentication]
+    [Authorize]
     public class ChatsController : ApiController
     {
+        private const string RegexString = @".*\/chats\/([^\/]+)\/?";
         [Route("{id:int}")]
         [HttpGet]
+        [UserIsInChatAuthorization(RegexString = RegexString)]
         public Chat GetChatById(int id)
         {
             var chat = RepositoryBuilder.ChatsRepository.GetChat(id);
@@ -31,6 +38,13 @@ namespace DotNetMessenger.WebApi.Controllers
         {
             if (chatCredentials.Members == null)
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "No members"));
+            // check if current user is in chat
+            if (!(Thread.CurrentPrincipal is UserPrincipal))
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Server broken"));
+            var principal = (UserPrincipal) Thread.CurrentPrincipal;
+            if (!chatCredentials.Members.Contains(principal.UserId))
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized, "Cannot create chat not including yourself"));
+
             var members = chatCredentials.Members as int[] ?? chatCredentials.Members.ToArray();
             try
             {
@@ -62,6 +76,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{id:int}")]
         [HttpDelete]
+        [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void DeleteChat(int id)
         {
             try
@@ -77,6 +92,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{id:int}/info")]
         [HttpGet]
+        [UserIsInChatAuthorization(RegexString = RegexString)]
         public ChatInfo GetChatInfo(int id)
         {
             try
@@ -97,6 +113,7 @@ namespace DotNetMessenger.WebApi.Controllers
 
         [Route("{id:int}/info")]
         [HttpDelete]
+        [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void DeleteChatInfo(int id)
         {
             try
@@ -114,7 +131,7 @@ namespace DotNetMessenger.WebApi.Controllers
                     "No such chat exists"));
             }
         }
-
+        /* TODO: ADD ROLES TO USERPRINCIPAL AND AUTHORIZATION FILTER BASED ON ROLE */
         [Route("{id:int}/info")]
         [HttpPut]
         public void SetChatInfo(int id, [FromBody] ChatInfo chatInfo)

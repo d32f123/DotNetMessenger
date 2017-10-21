@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Filters;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Principals;
 using DotNetMessenger.WebApi.Results;
 
@@ -18,42 +18,54 @@ namespace DotNetMessenger.WebApi.Filters
         public async Task AuthenticateAsync(HttpAuthenticationContext context, CancellationToken cancellationToken)
         {
             var request = context.Request;
+            var authorization = request.Headers.Authorization;
 
-            var tokensEnum = request.Headers.GetValues("Token");
-
-            if (tokensEnum == null)
+            if (authorization == null)
             {
                 return;
             }
 
-            var tokens = tokensEnum as string[] ?? tokensEnum.ToArray();
-            if (!tokens.Any())
+            if (authorization.Scheme != "Basic")
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(authorization.Parameter))
             {
                 context.ErrorResult = new AuthenticationFailureResult("Missing token", request);
+                return;
             }
+
+            var tokenStr = authorization.Parameter.FromBase64ToString();
+
+            if (string.IsNullOrEmpty(tokenStr))
+            {
+                context.ErrorResult = new AuthenticationFailureResult("Invalid token", request);
+                return;
+            }
+
+            // basic auth is like username:password
+            // since we have only token and no pass it looks like this: token:[empty pass]
+            // need toremove the colon (:)
+            tokenStr = tokenStr.Remove(tokenStr.Length - 1, 1);
 
             try
             {
-                var token = tokens.Single();
-                if (string.IsNullOrEmpty(token))
-                    context.ErrorResult = new AuthenticationFailureResult("Missing token", request);
-
-                var userId = RepositoryBuilder.TokensRepository.GetUserIdByToken(Guid.Parse(token));
+                var token = Guid.Parse(tokenStr);
+                var userId = RepositoryBuilder.TokensRepository.GetUserIdByToken(token);
                 if (userId == 0)
                     context.ErrorResult = new AuthenticationFailureResult("Invalid token", request);
 
                 var userName = RepositoryBuilder.UsersRepository.GetUser(userId).Username;
 
-                HttpContext.Current.User = new UserPrincipal(userId, userName);
-                context.Principal = new UserPrincipal(userId, userName);
-                Thread.CurrentPrincipal = new UserPrincipal(userId, userName);
+                HttpContext.Current.User = new UserPrincipal(userId, userName, token);
+                context.Principal = new UserPrincipal(userId, userName, token);
+                Thread.CurrentPrincipal = new UserPrincipal(userId, userName, token);
             }
             catch
             {
                 context.ErrorResult = new AuthenticationFailureResult("Invalid token", request);
             }
-
-
         }
 
         public Task ChallengeAsync(HttpAuthenticationChallengeContext context, CancellationToken cancellationToken)

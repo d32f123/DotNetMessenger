@@ -117,6 +117,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <returns>null if user not found, else User object</returns>
         public User GetUser(int userId)
         {
+            if (userId == 0)
+                return null;
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -165,6 +167,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Username = userName;
                     }
+                    if (user.Id == 0)
+                        return null;
                     return user;
                 }
             }

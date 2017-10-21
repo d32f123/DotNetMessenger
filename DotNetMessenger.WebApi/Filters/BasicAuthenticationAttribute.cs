@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Security.Principal;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Filters;
+using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Results;
-
 namespace DotNetMessenger.WebApi.Filters
 {
     public abstract class BasicAuthenticationAttribute : Attribute, IAuthenticationFilter
@@ -90,35 +89,7 @@ namespace DotNetMessenger.WebApi.Filters
 
         private static Tuple<string, string> ExtractUserNameAndPassword(string authorizationParameter)
         {
-            byte[] credentialBytes;
-
-            try
-            {
-                credentialBytes = Convert.FromBase64String(authorizationParameter);
-            }
-            catch (FormatException)
-            {
-                return null;
-            }
-
-            // The currently approved HTTP 1.1 specification says characters here are ISO-8859-1.
-            // However, the current draft updated specification for HTTP 1.1 indicates this encoding is infrequently
-            // used in practice and defines behavior only for ASCII.
-            var encoding = Encoding.ASCII;
-            // Make a writable copy of the encoding to enable setting a decoder fallback.
-            encoding = (Encoding)encoding.Clone();
-            // Fail on invalid bytes rather than silently replacing and continuing.
-            encoding.DecoderFallback = DecoderFallback.ExceptionFallback;
-            string decodedCredentials;
-
-            try
-            {
-                decodedCredentials = encoding.GetString(credentialBytes);
-            }
-            catch (DecoderFallbackException)
-            {
-                return null;
-            }
+            var decodedCredentials = authorizationParameter.FromBase64ToString();
 
             if (string.IsNullOrEmpty(decodedCredentials))
             {

@@ -1,13 +1,15 @@
-﻿using System.Security.Principal;
+﻿using System;
+using System.Security.Principal;
 
 namespace DotNetMessenger.WebApi.Principals
 {
     public class UserPrincipal : IPrincipal
     {
-        public UserPrincipal(int userId, string userName)
+        public UserPrincipal(int userId, string userName, Guid token)
         {
             Identity = new GenericIdentity(userName);
             UserId = userId;
+            Token = token;
         }
         public bool IsInRole(string role)
         {
@@ -15,6 +17,7 @@ namespace DotNetMessenger.WebApi.Principals
         }
 
         public int UserId { get; }
+        public Guid Token { get; }
         public IIdentity Identity { get; }
     }
 }

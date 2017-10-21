@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Web.Http.Filters;
 using DotNetMessenger.WebApi.Results;
 
-namespace DotNetMessenger.WebApi.Filters
+namespace DotNetMessenger.WebApi.Extensions
 {
     public static class HttpAuthenticationChallengeContextExtensions
     {

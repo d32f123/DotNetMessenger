@@ -1,6 +1,8 @@
-﻿using System.Security.Principal;
+﻿using System;
+using System.Security.Principal;
 using System.Threading;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters
 {
@@ -13,11 +15,7 @@ namespace DotNetMessenger.WebApi.Filters
             if (user == null)
                 return null;
             var userPassword = RepositoryBuilder.UsersRepository.GetPassword(user.Id);
-            if (userPassword != password)
-                return null;
-            // if succeeded
-            var identity = new GenericIdentity(userName);
-            return new GenericPrincipal(identity, null);
+            return userPassword != password ? null : new UserPrincipal(user.Id, userName, Guid.Empty);
         }
     }
 }
