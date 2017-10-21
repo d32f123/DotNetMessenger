@@ -16,7 +16,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
     /// <inheritdoc />
     /// <summary>
     /// Authorizes based on user <see cref="Permissions"/> in the given chat.
-    /// Chat id is extracteed from the uri using <see cref="P:DotNetMessenger.WebApi.Filters.Authorization.ChatUserAuthorizationAttribute.RegexString" /> string
+    /// Chat id is extracted from the uri using <see cref="P:DotNetMessenger.WebApi.Filters.Authorization.ChatUserAuthorizationAttribute.RegexString" /> string
     /// </summary>
     public class ChatUserAuthorizationAttribute : AuthorizationFilterAttribute
     {

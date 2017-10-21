@@ -2,6 +2,7 @@
 using System.Security.Principal;
 using System.Threading;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authentication
@@ -18,8 +19,8 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             var user = RepositoryBuilder.UsersRepository.GetUserByUsername(userName);
             if (user == null)
                 return null;
-            var userPassword = RepositoryBuilder.UsersRepository.GetPassword(user.Id);
-            return userPassword != password ? null : new UserPrincipal(user.Id, userName, Guid.Empty);
+            var storedPassword = RepositoryBuilder.UsersRepository.GetPassword(user.Id);
+            return PasswordHasher.ComparePasswordToHash(password, storedPassword) ? null : new UserPrincipal(user.Id, userName, Guid.Empty);
         }
     }
 }

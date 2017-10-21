@@ -2,5 +2,6 @@
 A messenger using .NET platform
 
 ## TODO
-- Password hashing
+- Token hashing
+- HTTPS security
 - Async DB interaction

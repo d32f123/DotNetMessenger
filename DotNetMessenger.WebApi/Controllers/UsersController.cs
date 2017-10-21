@@ -9,6 +9,7 @@ using System.Web.Http;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
+using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Models;
@@ -119,7 +120,8 @@ namespace DotNetMessenger.WebApi.Controllers
         {
             try
             {
-                return RepositoryBuilder.UsersRepository.CreateUser(userCredentials.Username, userCredentials.Password);
+                var hash = PasswordHasher.PasswordToHash(userCredentials.Password);
+                return RepositoryBuilder.UsersRepository.CreateUser(userCredentials.Username, hash);
             }
             catch (UserAlreadyExistsException)
             {
@@ -244,7 +246,8 @@ namespace DotNetMessenger.WebApi.Controllers
         {
             try
             {
-                RepositoryBuilder.UsersRepository.SetPassword(id, newPassword);
+                var hash = PasswordHasher.PasswordToHash(newPassword);
+                RepositoryBuilder.UsersRepository.SetPassword(id, hash);
             }
             catch (ArgumentNullException)
             {

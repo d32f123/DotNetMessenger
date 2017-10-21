@@ -92,6 +92,7 @@
     <Compile Include="Controllers\MessagesController.cs" />
     <Compile Include="Controllers\TokensController.cs" />
     <Compile Include="Controllers\UsersController.cs" />
+    <Compile Include="Extensions\PasswordHasher.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\HttpAuthenticationChallengeContextExtensions.cs" />
     <Compile Include="Filters\Authentication\BasicAuthenticationAttribute.cs" />
