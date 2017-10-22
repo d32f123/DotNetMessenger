@@ -9,7 +9,7 @@ using DotNetMessenger.WebApi.Results;
 
 namespace DotNetMessenger.WebApi.Filters.Authentication
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAuthenticationFilter"/>
     /// <summary>
     /// Reads Base64 string, converts it to username and password pair and executes 
     /// <see cref="M:DotNetMessenger.WebApi.Filters.Authentication.BasicAuthenticationAttribute.Authenticate(System.String,System.String,System.Threading.CancellationToken)" /> method
@@ -53,7 +53,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             var username = userNameAndPassword.Item1;
             var password = userNameAndPassword.Item2;
 
-            var principal = Authenticate(username, password, cancellationToken);
+            var principal = await Authenticate(username, password, cancellationToken);
 
             if (principal == null)
             {
@@ -67,7 +67,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             }
         }
 
-        protected abstract IPrincipal Authenticate(string userName, string password,
+        protected abstract Task<IPrincipal> Authenticate(string userName, string password,
             CancellationToken cancellationToken);
 
         public Task ChallengeAsync(HttpAuthenticationChallengeContext context, CancellationToken cancellationToken)

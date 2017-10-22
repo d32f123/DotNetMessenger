@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -11,7 +10,7 @@ using DotNetMessenger.WebApi.Results;
 
 namespace DotNetMessenger.WebApi.Filters.Authentication
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="IAuthenticationFilter"/>
     /// <summary>
     /// Reads Base64 string from auth header and converts it to a token
     /// Sets <see cref="T:System.Security.Principal.IPrincipal" /> to the user using the token
@@ -58,7 +57,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             try
             {
                 var token = Guid.Parse(tokenStr);
-                var userId = RepositoryBuilder.TokensRepository.GetUserIdByToken(token);
+                var userId = await RepositoryBuilder.TokensRepository.GetUserIdByTokenAsync(token);
                 if (userId == 0)
                     context.ErrorResult = new AuthenticationFailureResult("Invalid token", request);
 

@@ -1,5 +1,5 @@
 ﻿using System;
-using DotNetMessenger.Model;
+using System.Threading.Tasks;
 
 namespace DotNetMessenger.DataLayer
 {
@@ -11,6 +11,11 @@ namespace DotNetMessenger.DataLayer
         /// <param name="token">User's token</param>
         /// <returns>Id of the user, 0 if no user was found</returns>
         int GetUserIdByToken(Guid token);
+        /// <summary>
+        /// Async version of <see cref="GetUserIdByToken"/>
+        /// </summary>
+        /// <seealso cref="GetUserIdByToken"/>
+        Task<int> GetUserIdByTokenAsync(Guid token);
         /// <summary>
         /// Generates a token given user's id
         /// </summary>

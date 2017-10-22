@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Threading.Tasks;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
@@ -36,10 +37,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
             if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))
                 throw new ArgumentNullException(nameof(userName));
 
-
-            /* TODO: ADD HASH GENERATION */
-            var hash = password;
-
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -56,10 +53,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     {
                         command.Transaction = transaction;
                         command.CommandText =
-                            "INSERT INTO [Users] ([Username], [Password]) OUTPUT INSERTED.[ID] VALUES (@userName, @hash)";
+                            "INSERT INTO [Users] ([Username], [Password]) OUTPUT INSERTED.[ID] VALUES (@userName, @password)";
 
                         command.Parameters.AddWithValue("@userName", userName);
-                        command.Parameters.AddWithValue("@hash", hash);
+                        command.Parameters.AddWithValue("@password", password);
 
                         var id = (int) command.ExecuteScalar();
                         user = new UserSqlProxy {Id = id, Username = userName};
@@ -167,9 +164,37 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Username = userName;
                     }
-                    if (user.Id == 0)
-                        return null;
-                    return user;
+                    return user.Id == 0 ? null : user;
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Async version of <see cref="M:DotNetMessenger.DataLayer.SqlServer.UsersRepository.GetUserByUsername(System.String)" />
+        /// </summary>
+        /// <seealso cref="M:DotNetMessenger.DataLayer.SqlServer.UsersRepository.GetUserByUsername(System.String)" />
+        public async Task<User> GetUserByUsernameAsync(string userName)
+        {
+            if (string.IsNullOrEmpty(userName))
+                return null;
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT [ID], [Password] FROM [Users] WHERE [Username] = @userName";
+                    command.Parameters.AddWithValue("@userName", userName);
+
+                    var user = new UserSqlProxy();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (!reader.HasRows)
+                            return null;
+                        await reader.ReadAsync();
+                        user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
+                        user.Username = userName;
+                    }
+                    return user.Id == 0 ? null : user;
                 }
             }
         }
@@ -396,9 +421,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             if (userId == 0)
                 throw new ArgumentException();
-            /* TODO: GENERATE HASH */
-            var newHash = newPassword;
-            if (string.IsNullOrEmpty(newHash))
+            if (string.IsNullOrEmpty(newPassword))
                 throw new ArgumentNullException();
             
             using (var connection = new SqlConnection(_connectionString))
@@ -412,7 +435,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.CommandText = "UPDATE [Users] SET [Password] = @password WHERE [ID] = @userId";
 
                     command.Parameters.AddWithValue("@userId", userId);
-                    command.Parameters.AddWithValue("@password", newHash);
+                    command.Parameters.AddWithValue("@password", newPassword);
 
                     command.ExecuteNonQuery();
                 }

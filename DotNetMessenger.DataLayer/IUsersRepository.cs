@@ -1,4 +1,5 @@
-﻿using DotNetMessenger.Model;
+﻿using System.Threading.Tasks;
+using DotNetMessenger.Model;
 
 namespace DotNetMessenger.DataLayer
 {
@@ -28,6 +29,11 @@ namespace DotNetMessenger.DataLayer
         /// <param name="userName">The username of the user</param>
         /// <returns>Null on invalid username, else object representing given user</returns>
         User GetUserByUsername(string userName);
+        /// <summary>
+        /// Async version of <see cref="GetUserByUsername"/>
+        /// </summary>
+        /// <seealso cref="GetUserByUsername"/>
+        Task<User> GetUserByUsernameAsync(string userName);
         /// <summary>
         /// Gets information about the user (last name et c.)
         /// </summary>

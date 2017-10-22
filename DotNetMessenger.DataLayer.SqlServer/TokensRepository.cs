@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Threading.Tasks;
 
 namespace DotNetMessenger.DataLayer.SqlServer
 {
@@ -38,6 +39,35 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         if (!reader.HasRows)
                             throw new ArgumentException();
                         reader.Read();
+                        return reader.GetInt32(reader.GetOrdinal("UserID"));
+                    }
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Async version of <see cref="GetUserIdByToken"/>
+        /// </summary>
+        /// <seealso cref="GetUserIdByToken"/>
+        public async Task<int> GetUserIdByTokenAsync(Guid token)
+        {
+            if (token == Guid.Empty)
+                throw new ArgumentException();
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "SELECT [UserID] FROM [Tokens] WHERE [Token] = @token";
+
+                    command.Parameters.AddWithValue("@token", token);
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (!reader.HasRows)
+                            throw new ArgumentException();
+                        await reader.ReadAsync();
                         return reader.GetInt32(reader.GetOrdinal("UserID"));
                     }
                 }
