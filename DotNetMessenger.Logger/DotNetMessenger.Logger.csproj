@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C997DF8D-5F30-4A6D-A823-9BB046EFCAC0}</ProjectGuid>
+    <ProjectGuid>{F1842AD9-D2C0-48D2-9A64-B40F4EB5F883}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DotNetMessenger.DataLayer.SqlServer</RootNamespace>
-    <AssemblyName>DotNetMessenger.DataLayer.SqlServer</AssemblyName>
+    <RootNamespace>DotNetMessenger.Logger</RootNamespace>
+    <AssemblyName>DotNetMessenger.Logger</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -30,12 +30,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.AspNet.Identity.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.2.1\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.4.12\lib\net45\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -44,31 +43,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Exceptions\ChatExceptions.cs" />
-    <Compile Include="Exceptions\GeneralExceptions.cs" />
-    <Compile Include="Exceptions\UserExceptions.cs" />
-    <Compile Include="ModelProxies\ChatSqlProxy.cs" />
-    <Compile Include="ChatsRepository.cs" />
-    <Compile Include="ModelProxies\MessageSqlProxy.cs" />
-    <Compile Include="RepositoryBuilder.cs" />
-    <Compile Include="SqlHelper.cs" />
-    <Compile Include="MessagesRepository.cs" />
-    <Compile Include="ModelProxies\UserSqlProxy.cs" />
-    <Compile Include="TokensRepository.cs" />
-    <Compile Include="UsersRepository.cs" />
+    <Compile Include="ChronoLogger.cs" />
+    <Compile Include="NLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DotNetMessenger.DataLayer\DotNetMessenger.DataLayer.csproj">
-      <Project>{7571a909-12da-4c29-8ba0-a7a21732046e}</Project>
-      <Name>DotNetMessenger.DataLayer</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\DotNetMessenger.Model\DotNetMessenger.Model.csproj">
-      <Project>{79aefa90-761c-4eab-94f0-3e3dee808b7f}</Project>
-      <Name>DotNetMessenger.Model</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
+    <Content Include="NLog.config">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Include="NLog.xsd">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

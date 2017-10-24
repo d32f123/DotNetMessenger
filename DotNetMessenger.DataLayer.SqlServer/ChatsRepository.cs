@@ -132,7 +132,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// Gets a chat given its id
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
-        /// <returns>Null if no chat exists, otherwise chat object representing given entity</returns>
+        /// <returns>Chat object representing given entity</returns>
+        /// <exception cref="ArgumentException">Throws if <paramref name="chatId"/> is invalid</exception>
         public Chat GetChat(int chatId)
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -149,7 +150,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     {
                         // if select returned no rows
                         if (!reader.HasRows)
-                            return null;
+                            throw new ArgumentException();
                         reader.Read();
                         return new ChatSqlProxy
                         {
@@ -606,7 +607,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
             using (var scope = new TransactionScope())
             {
-                var chat = GetChat(chatId);
 
                 using (var connection = new SqlConnection(_connectionString))
                 {

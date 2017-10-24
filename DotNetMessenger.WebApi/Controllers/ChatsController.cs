@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
-using DotNetMessenger.DataLayer.SqlServer.Exceptions;
+using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Models;
 using DotNetMessenger.WebApi.Principals;
+using NLog;
 
 namespace DotNetMessenger.WebApi.Controllers
 {
@@ -33,10 +33,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public Chat GetChatById(int id)
         {
-            var chat = RepositoryBuilder.ChatsRepository.GetChat(id);
-            if (chat == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No chat found"));
-            return chat;
+            using (var timeLog =
+                new ChronoLogger(LogLevel.Info, "{0}: Deleting chat with id: {1}", nameof(DeleteChat), id))
+            {
+                timeLog.Start();
+                return RepositoryBuilder.ChatsRepository.GetChat(id);
+            }
         }
         /// <summary>
         /// Creates a new chat. List of users must include the sender
@@ -47,41 +49,57 @@ namespace DotNetMessenger.WebApi.Controllers
         [HttpPost]
         public Chat CreateChat([FromBody] ChatCredentials chatCredentials)
         {
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(CreateChat), chatCredentials);
             if (chatCredentials.Members == null)
+            {
+                NLogger.Logger.Error("{0}: {1} is null", nameof(CreateChat), nameof(chatCredentials));
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "No members"));
+            }
             // check if current user is in chat
             if (!(Thread.CurrentPrincipal is UserPrincipal))
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Server broken"));
+            {
+                NLogger.Logger.Fatal("{0}: No principal set", nameof(CreateChat));
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
+                    "Server broken"));
+            }
             var principal = (UserPrincipal) Thread.CurrentPrincipal;
             if (!chatCredentials.Members.Contains(principal.UserId))
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized, "Cannot create chat not including yourself"));
-
+            {
+                NLogger.Logger.Error("{0}: {1} does not contain the person who is creating the chat",
+                    nameof(CreateChat), nameof(chatCredentials.Members));
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized,
+                    "Cannot create chat not including yourself"));
+            }
+            NLogger.Logger.Debug("{0}: Converting {1} to array", nameof(CreateChat), nameof(chatCredentials.Members));
             var members = chatCredentials.Members as int[] ?? chatCredentials.Members.ToArray();
-            try
+            switch (chatCredentials.ChatType)
             {
-                switch (chatCredentials.ChatType)
-                {
-                    case ChatTypes.Dialog:
-                        if (members.Length != 2)
-                            throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                                "Dialog requires 2 users"));
-                        return RepositoryBuilder.ChatsRepository.CreateDialog(members[0], members[1]);
-                    case ChatTypes.GroupChat:
-                        return RepositoryBuilder.ChatsRepository.CreateGroupChat(members, chatCredentials.Title);
-                    default:
+                case ChatTypes.Dialog:
+                    if (members.Length != 2)
+                    {
+                        NLogger.Logger.Error("{0}: Trying to create dialog but number of users != 2", nameof(CreateChat));
                         throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                            "Invalid chat type"));
+                            "Dialog requires 2 users"));
+                    }
+                    using (var timeLog = new ChronoLogger("{0}: Creating dialog chat with parameters: {1}",
+                        nameof(CreateChat), members))
+                    {
+                        timeLog.Start();
+                        return RepositoryBuilder.ChatsRepository.CreateDialog(members[0], members[1]);
+                    }
+                case ChatTypes.GroupChat:
+                {
+                    using (var timeLog = new ChronoLogger("{0}: Creating group chat with parameters: {1}",
+                        nameof(CreateChat), members))
+                    {
+                            timeLog.Start();
+                        return RepositoryBuilder.ChatsRepository.CreateGroupChat(members, chatCredentials.Title);
+                    }
                 }
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Title cannot be empty"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "Some users are invalid"));
+                default:
+                    NLogger.Logger.Error("{0}: Unknown chat type: {1}", nameof(CreateChat), chatCredentials.ChatType);
+                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
+                        "Invalid chat type"));
             }
         }
         /// <summary>
@@ -93,14 +111,11 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void DeleteChat(int id)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(DeleteChat), id);
+            using (var timeLog = new ChronoLogger("{0}: Deleting chat with id: {1}", nameof(DeleteChat), id))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.DeleteChat(id);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat exists"));
             }
         }
         /// <summary>
@@ -113,19 +128,11 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public ChatInfo GetChatInfo(int id)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(GetChatInfo), id);
+            using (var timeLog = new ChronoLogger("{0}: Fetching chat info for id: {1}", nameof(GetChatInfo), id))
             {
+                timeLog.Start();
                 return RepositoryBuilder.ChatsRepository.GetChatInfo(id);
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No information for dialog chat"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat exists"));
             }
         }
         /// <summary>
@@ -137,19 +144,11 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
         public void DeleteChatInfo(int id)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(DeleteChatInfo), id);
+            using (var timeLog = new ChronoLogger("{0}: Deleting chat info for id: {1}", nameof(DeleteChatInfo), id))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.DeleteChatInfo(id);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No information exists"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat exists"));
             }
         }
         /// <summary>
@@ -162,24 +161,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
         public void SetChatInfo(int id, [FromBody] ChatInfo chatInfo)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(SetChatInfo), id, chatInfo);
+            using (var timeLog = new ChronoLogger("{0}: Setting chat info for id {1}. Info: {2}", nameof(SetChatInfo),
+                id, chatInfo))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatInfo(id, chatInfo);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No info provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat exists"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
         /// <summary>
@@ -192,16 +179,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public User[] GetChatUsers(int id)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(GetChatUsers), id);
+            using (var timeLog = new ChronoLogger("{0}: Fetching chat users for id: {1}", nameof(GetChatUsers), id))
             {
+                timeLog.Start();
                 var users = RepositoryBuilder.ChatsRepository.GetChatUsers(id) as User[] ??
                             RepositoryBuilder.ChatsRepository.GetChatUsers(id).ToArray();
                 return users;
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat exists"));
             }
         }
         /// <summary>
@@ -214,19 +198,11 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void AddUser(int chatId, int userId)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(AddUser), chatId, userId);
+            using (var timeLog = new ChronoLogger("{0}: Adding user {1} to chat {2}", nameof(AddUser), userId, chatId))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.AddUser(chatId, userId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat or user exists"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
         /// <summary>
@@ -239,24 +215,11 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void KickUser(int chatId, int userId)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(KickUser), chatId, userId);
+            using (var timeLog = new ChronoLogger("{0}: Kicking user {1} from chat {2}", nameof(KickUser), userId, chatId))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.KickUser(chatId, userId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat or user exists"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
-            }
-            catch (UserIsCreatorException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Forbidden,
-                    "Cannot kick creator"));
             }
         }
         /// <summary>
@@ -269,24 +232,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void AddUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {
-            try
+            var newUsers = userIds as int[] ?? userIds.ToArray();
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(AddUsers), chatId, newUsers);
+            using (var timeLog =
+                new ChronoLogger("{0}: Adding users {1} to chat {2}", nameof(AddUsers), userIds, chatId))
             {
-                RepositoryBuilder.ChatsRepository.AddUsers(chatId, userIds);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No users provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat or user exists"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
+                timeLog.Start();
+                RepositoryBuilder.ChatsRepository.AddUsers(chatId, newUsers);
             }
         }
         /// <summary>
@@ -299,29 +251,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void KickUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {
-            try
+            var kickedUsers = userIds as int[] ?? userIds.ToArray();
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(KickUsers), chatId, kickedUsers);
+            using (var timeLog =
+                new ChronoLogger("{0}: Kicking users {1} from chat {2}", nameof(KickUsers), userIds, chatId))
             {
-                RepositoryBuilder.ChatsRepository.KickUsers(chatId, userIds);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No users provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat or user exists"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
-            }
-            catch (UserIsCreatorException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Forbidden,
-                    "Cannot kick creator"));
+                timeLog.Start();
+                RepositoryBuilder.ChatsRepository.KickUsers(chatId, kickedUsers);
             }
         }
         /// <summary>
@@ -335,19 +271,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void SetCreator(int chatId, int userId)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(SetCreator), chatId, userId);
+            using (var timeLog =
+                new ChronoLogger("{0}: Setting creator for chat {2}. UserID: {1}", nameof(SetCreator), userId, chatId))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetCreator(chatId, userId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
         /// <summary>
@@ -361,19 +290,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public ChatUserInfo GetChatSpecificUserInfo(int chatId, int userId)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(GetChatSpecificUserInfo), chatId, userId);
+            using (var timeLog =
+                new ChronoLogger("{0}: Fetching chat-specific user info for userId: {1} in chatId: {2}",
+                    nameof(GetChatSpecificUserInfo), userId, chatId))
             {
+                timeLog.Start();
                 return RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
         /// <summary>
@@ -386,24 +309,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void DeleteChatSpecificUserInfo(int chatId, int userId)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(DeleteChatSpecificUserInfo), chatId, userId);
+            using (var timeLog =
+                new ChronoLogger("{0}: Deleting chat-specific user info for userId: {1} in chatId: {2}",
+                    nameof(DeleteChatSpecificUserInfo), userId, chatId))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.DeleteChatSpecificInfo(userId, chatId);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No info found"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
         /// <summary>
@@ -417,24 +329,15 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void SetChatSpecificUserInfo(int chatId, int userId, [FromBody] ChatUserInfo chatUserInfo)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}, {3}", nameof(SetChatSpecificUserInfo), chatId,
+                userId, chatUserInfo);
+            using (var timeLog =
+                new ChronoLogger("{0}: Setting chat-specific user info for userId: {1}, in chatId: {2}, info: {3}",
+                    nameof(SetChatSpecificUserInfo), userId, chatId, chatUserInfo))
             {
-                RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(userId, chatId, chatUserInfo, chatUserInfo.Role != null);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No info provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
+                timeLog.Start();
+                RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(userId, chatId, chatUserInfo,
+                    chatUserInfo.Role != null);
             }
         }
         /// <summary>
@@ -449,24 +352,14 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public ChatUserInfo SetChatSpecificUserRole(int chatId, int userId, int roleId)
         {
-            try
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}, {3}", nameof(SetChatSpecificUserRole), chatId,
+                userId, roleId);
+            using (var timeLog =
+                new ChronoLogger("{0}: Setting chat-specific user role for userId: {1}, in chatId: {2}, role: {3}",
+                    nameof(SetChatSpecificUserRole), userId, chatId, roleId))
             {
+                timeLog.Start();
                 return RepositoryBuilder.ChatsRepository.SetChatSpecificRole(userId, chatId, (UserRoles) roleId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
-            }
-            catch (Exception)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Forbidden,
-                    "Incorrect role"));
             }
         }
         /// <summary>
@@ -480,28 +373,20 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public void SetChatUserInfoForCurrentUser(int chatId, [FromBody] ChatUserInfo chatUserInfo)
         {
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(SetChatUserInfoForCurrentUser), chatId, chatUserInfo);
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Fatal("{0}: No principal set", nameof(SetChatUserInfoForCurrentUser));
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
                     "Server broken"));
+            }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
-            try
+            using (var timeLog =
+                new ChronoLogger("{0}: Setting chat-specific user info for caller, chatId: {1}, role: {2}",
+                    nameof(SetChatUserInfoForCurrentUser), chatId, chatUserInfo))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(principal.UserId, chatId, chatUserInfo);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No info provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
         /// <summary>
@@ -513,31 +398,24 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public void ClearChatUserInfoForCurrentUser(int chatId)
         {
+            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(ClearChatUserInfoForCurrentUser), chatId);
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Fatal("{0}: No principal set", nameof(ClearChatUserInfoForCurrentUser));
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
                     "Server broken"));
+            }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
-            try
+            using (var timeLog =
+                new ChronoLogger("{0}: Clearing chat-specific user info for caller, chatId: {1}",
+                    nameof(SetChatUserInfoForCurrentUser), chatId))
             {
+                timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(principal.UserId, chatId, new ChatUserInfo
                 {
-                    Nickname = null, Role = null
+                    Nickname = null,
+                    Role = null
                 });
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No info provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "No such chat or user exists or user is not in chat"));
-            }
-            catch (ChatTypeMismatchException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Chat cannot be dialog"));
             }
         }
     }
