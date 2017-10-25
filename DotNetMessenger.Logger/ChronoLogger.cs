@@ -30,6 +30,8 @@ namespace DotNetMessenger.Logger
             _stopwatch = new Stopwatch();
         }
 
+        public TimeSpan WarnTimeSpan { get; set; } = new TimeSpan(0, 0, 4); // 4 seconds default
+
         public void Start()
         {
             _stopwatch.Start();
@@ -40,8 +42,9 @@ namespace DotNetMessenger.Logger
         public void Dispose()
         {
             _stopwatch.Stop();
-            NLogger.Logger.Log(_logLevel, _timerStopString + _formatString, _formatValues);
-            NLogger.Logger.Log(_logLevel, "Elapsed: {0}", _stopwatch.Elapsed);
+            NLogger.Logger.Log((_stopwatch.Elapsed.CompareTo(WarnTimeSpan) <= 0 ? _logLevel : LogLevel.Warn), _timerStopString + _formatString, _formatValues);
+            NLogger.Logger.Log(_stopwatch.Elapsed.CompareTo(WarnTimeSpan) <= 0 ? _logLevel : LogLevel.Warn, 
+                "Elapsed: {0}" + (_stopwatch.Elapsed.CompareTo(WarnTimeSpan) <= 0 ? "" : ". JOB TOOK MORE THAN {1:c}"), _stopwatch.Elapsed, WarnTimeSpan);
         }
     }
 }
