@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
+using DotNetMessenger.Logger;
 
 namespace DotNetMessenger.DataLayer.SqlServer
 {
@@ -101,6 +101,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     try
                     {
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (Token:{1}, UserID:{2})", "[Tokens]", token, userId);
+
                     }
                     catch (SqlException)
                     {
@@ -133,6 +135,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentException(); // means token did not exist
+                    NLogger.Logger.Trace("DB:Deleted:{0}:WHERE Token:{1}", "[Tokens]", token);
+
                 }
             }
         }

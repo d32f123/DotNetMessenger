@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web.Http;
+﻿using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.WebApi.Handlers;
 
 namespace DotNetMessenger.WebApi
 {
@@ -24,6 +22,7 @@ namespace DotNetMessenger.WebApi
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+            config.MessageHandlers.Add(new LoggingHandler());
         }
     }
 }

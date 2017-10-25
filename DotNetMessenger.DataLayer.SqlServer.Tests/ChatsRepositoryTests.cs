@@ -339,10 +339,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
             _chatsRepository.DeleteChat(chat.Id);
-            chat = _chatsRepository.GetChat(chat.Id);
-
-            // assert
-            Assert.IsNull(chat);
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.GetChat(chat.Id));
         }
 
         [TestMethod]

@@ -5,20 +5,14 @@ using System.Threading.Tasks;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
+using DotNetMessenger.Logger;
 
 namespace DotNetMessenger.DataLayer.SqlServer
 {
     public class UsersRepository : IUsersRepository
     {
         private readonly string _connectionString;
-        public IChatsRepository ChatsRepository { get; set; }
-        
 
-        public UsersRepository(string connectionString, IChatsRepository chatsRepository)
-        {
-            _connectionString = connectionString;
-            ChatsRepository = chatsRepository;
-        }
 
         public UsersRepository(string connectionString)
         {
@@ -61,6 +55,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         var id = (int) command.ExecuteScalar();
                         user = new UserSqlProxy {Id = id, Username = userName};
                     }
+                    NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (Username:{1}, Password:x)", "[Users]", userName);
+
 
                     // make entry in userinfos table
                     using (var command = connection.CreateCommand())
@@ -74,6 +70,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                         command.ExecuteNonQuery();
                     }
+                    NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1})", "[UserInfos]", user.Id);
                     transaction.Commit();
 
                     return user;
@@ -104,6 +101,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentException("No user found", nameof(userId)); // if no user was deleted, throw an error
                 }
+                NLogger.Logger.Trace("DB:Deleted:{0}:WHERE UserID:{1}", "[Tokens]", userId);
             }
         }
         /// <inheritdoc />
@@ -111,11 +109,12 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// Returns a user given their id
         /// </summary>
         /// <param name="userId">The id of the user</param>
-        /// <returns>null if user not found, else User object</returns>
+        /// <returns><see cref="User"/> object</returns>
+        /// <exception cref="ArgumentException">Throws if id is invalid</exception>
         public User GetUser(int userId)
         {
             if (userId == 0)
-                return null;
+                throw new ArgumentException();
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -128,7 +127,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows)
-                            return null;
+                            throw new ArgumentException();
                         reader.Read();
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Username = reader.GetString(reader.GetOrdinal("Username"));
@@ -143,10 +142,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// </summary>
         /// <param name="userName">The name of the user</param>
         /// <returns>null if user not found, else User object</returns>
+        /// <exception cref="ArgumentException">Throws if userName is invalid</exception>
         public User GetUserByUsername(string userName)
         {
             if (string.IsNullOrEmpty(userName))
-                return null;
+                throw new ArgumentException();
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -159,7 +159,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows)
-                            return null;
+                            throw new ArgumentException();
                         reader.Read();
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Username = userName;
@@ -176,7 +176,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         public async Task<User> GetUserByUsernameAsync(string userName)
         {
             if (string.IsNullOrEmpty(userName))
-                return null;
+                throw new ArgumentException();
             using (var connection = new SqlConnection(_connectionString))
             {
                 await connection.OpenAsync();
@@ -189,7 +189,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         if (!reader.HasRows)
-                            return null;
+                            throw new ArgumentException();
                         await reader.ReadAsync();
                         user.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                         user.Username = userName;
@@ -218,6 +218,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.CommandText = "DELETE FROM [UserInfos] WHERE [UserID] = @userId";
                     command.Parameters.AddWithValue("@userId", userId);
                     command.ExecuteNonQuery();
+                    NLogger.Logger.Trace("DB:Deleted:{0}:WHERE UserID:{1})", "[UserInfos]", userId);
                 }
             }
         } 
@@ -227,6 +228,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// </summary>
         /// <param name="userId">The id of the user</param>
         /// <returns>UserInfo object representing the information, null if no user or info found</returns>
+        /// <exception cref="ArgumentException">Throws if no info found</exception>
         public UserInfo GetUserInfo(int userId)
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -242,7 +244,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows)
-                            return null;
+                            throw new ArgumentException();
                         reader.Read();
                         return new UserInfo
                         {
@@ -355,6 +357,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     try
                     {
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace("DB:Inserted:{0}:Object:{1} WHERE UserID:{2}", "[UserInfos]", userInfo, userId);
                     }
                     catch (SqlException)
                     {
@@ -397,6 +400,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     try
                     {
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace("DB:Updated:{0}:VALUES (Username:{1}) WHERE UserID:{2}", "[Users]", user.Username, user.Id);
                     }
                     catch (SqlException)
                     {
@@ -438,6 +442,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.Parameters.AddWithValue("@password", newPassword);
 
                     command.ExecuteNonQuery();
+                    NLogger.Logger.Trace("DB:Updated:{0}:VALUES (Password:x) WHERE UserID:{1}", "[Users]", userId);
                 }
             }
         }

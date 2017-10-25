@@ -6,10 +6,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
 {
     public class MessageSqlProxy : Message
     {
-        private bool _areAttachmentsFetched = false;
+        private bool _areAttachmentsFetched;
         private IEnumerable<Attachment> _attachments;
 
-        private bool _isExpirationDateFetched = false;
+        private bool _isExpirationDateFetched;
         private DateTime? _expirationDate;
 
 

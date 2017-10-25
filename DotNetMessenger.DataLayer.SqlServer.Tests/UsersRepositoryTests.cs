@@ -70,13 +70,10 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNull_When_InvalidId()
+        public void Should_ThrowArgumentException_When_InvalidId()
         {
             // act
-            var result = _usersRepository.GetUser(User.InvalidId);
-
-            // assert
-            Assert.IsNull(result);
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.GetUser(User.InvalidId));
         }
 
         [TestMethod]
@@ -122,10 +119,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             // act
             var addedUser = _usersRepository.CreateUser(user.Username, user.Password);
             _usersRepository.DeleteUser(addedUser.Id);
-            var deletedUser = _usersRepository.GetUser(addedUser.Id);
-
-            // assert
-            Assert.IsNull(deletedUser);
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.GetUser(addedUser.Id));
         }
 
         [TestMethod]
@@ -310,7 +304,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         public void Should_GetUserByUsername()
         {
             // arrange
-            const string userName = "d32f123";
+            const string userName = "someequaluser";
             var userCred = new UserCredentials{Username = userName, Password = "asd"};
             // act
             var user = _usersRepository.CreateUser(userCred.Username, userCred.Password);
@@ -321,21 +315,17 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
-        public void Should_ReturnNullOnInvalidUsername()
+        public void Should_ThrowArgumentException_OnInvalidUsername()
         {
             // act
-            var user = _usersRepository.GetUserByUsername("null");
-            // assert
-            Assert.IsNull(user);
+            Assert.ThrowsException<ArgumentException>(() => _usersRepository.GetUserByUsername("null"));
         }
 
         [TestMethod]
-        public void Should_ReturnNullOnNullUsername()
+        public void Should_ThrowArgumentException_OnNullUsername()
         {
             // act
-            var user = _usersRepository.GetUserByUsername(null);
-            // assert
-            Assert.IsNull(user);
+            Assert.ThrowsException<ArgumentException>(() =>_usersRepository.GetUserByUsername(null));
         }
 
         [TestMethod]
@@ -352,7 +342,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
 
             //act
             var chatsRepository = new ChatsRepository(ConnectionString);
-            var usersRepository = new UsersRepository(ConnectionString, chatsRepository);
+            var usersRepository = new UsersRepository(ConnectionString);
             chatsRepository.UsersRepository = usersRepository;
 
             var result = usersRepository.CreateUser(user.Username, user.Password);

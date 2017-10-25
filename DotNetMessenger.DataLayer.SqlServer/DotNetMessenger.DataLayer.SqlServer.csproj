@@ -33,6 +33,9 @@
     <Reference Include="Microsoft.AspNet.Identity.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.AspNet.Identity.Core.2.2.1\lib\net45\Microsoft.AspNet.Identity.Core.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.4.12\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Transactions" />
@@ -62,6 +65,10 @@
     <ProjectReference Include="..\DotNetMessenger.DataLayer\DotNetMessenger.DataLayer.csproj">
       <Project>{7571a909-12da-4c29-8ba0-a7a21732046e}</Project>
       <Name>DotNetMessenger.DataLayer</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\DotNetMessenger.Logger\DotNetMessenger.Logger.csproj">
+      <Project>{834ac2cb-b64d-418f-af9b-5486ae936f45}</Project>
+      <Name>DotNetMessenger.Logger</Name>
     </ProjectReference>
     <ProjectReference Include="..\DotNetMessenger.Model\DotNetMessenger.Model.csproj">
       <Project>{79aefa90-761c-4eab-94f0-3e3dee808b7f}</Project>

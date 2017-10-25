@@ -4,11 +4,14 @@ using System.Net.Http;
 using System.Threading;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.Logger;
 using DotNetMessenger.WebApi.Filters.Authentication;
+using DotNetMessenger.WebApi.Filters.Logging;
 using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Controllers
 {
+    [ExpectedExceptionsFilter]
     [RoutePrefix("api/tokens")]
     public class TokensController : ApiController
     {
@@ -22,17 +25,20 @@ namespace DotNetMessenger.WebApi.Controllers
         [Authorize]
         public Guid GenerateUserToken()
         {
+            NLogger.Logger.Debug("Called");
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Fatal("Principal is not set");
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Server broken"));
+            }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
 
-            try
+            using (var timeLog = new ChronoLogger("Generating token for user {0}", principal.UserId))
             {
-                return RepositoryBuilder.TokensRepository.GenerateToken(principal.UserId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
+                timeLog.Start();
+                var token = RepositoryBuilder.TokensRepository.GenerateToken(principal.UserId);
+                NLogger.Logger.Info("Token generated for user {0}", principal.UserId);
+                return token;
             }
         }
         /// <summary>
@@ -45,10 +51,15 @@ namespace DotNetMessenger.WebApi.Controllers
         [Authorize]
         public int GetUserIdFromToken()
         {
+            NLogger.Logger.Debug("Called");
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Fatal("Principal is not set");
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Server broken"));
+            }
 
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
+            NLogger.Logger.Info("UserID successfully fetched: {0}", principal.UserId);
             return principal.UserId;
         }
         /// <summary>
@@ -60,18 +71,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [Authorize]
         public void DeleteUserToken()
         {
+            NLogger.Logger.Debug("Called");
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Fatal("Principal is not set");
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError, "Server broken"));
+            }
 
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
-            try
-            {
-                RepositoryBuilder.TokensRepository.InvalidateToken(principal.Token);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "Token is invalid"));
-            }
+            RepositoryBuilder.TokensRepository.InvalidateToken(principal.Token);
+            NLogger.Logger.Info("User token invalidated: {0}", principal.Token);
         }
     }
 }

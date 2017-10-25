@@ -26,7 +26,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.DataLayer.S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WebApi", "DotNetMessenger.WebApi\DotNetMessenger.WebApi.csproj", "{011D0245-1599-4A3E-8D93-F2595A4AD615}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.Logger", "DotNetMessenger.Logger\DotNetMessenger.Logger.csproj", "{F1842AD9-D2C0-48D2-9A64-B40F4EB5F883}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.Logger", "DotNetMessenger.Logger\DotNetMessenger.Logger.csproj", "{834AC2CB-B64D-418F-AF9B-5486AE936F45}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -54,10 +54,10 @@ Global
 		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{011D0245-1599-4A3E-8D93-F2595A4AD615}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F1842AD9-D2C0-48D2-9A64-B40F4EB5F883}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F1842AD9-D2C0-48D2-9A64-B40F4EB5F883}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F1842AD9-D2C0-48D2-9A64-B40F4EB5F883}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F1842AD9-D2C0-48D2-9A64-B40F4EB5F883}.Release|Any CPU.Build.0 = Release|Any CPU
+		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

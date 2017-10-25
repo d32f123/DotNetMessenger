@@ -1,23 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Web.Http;
 
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer;
-using DotNetMessenger.DataLayer.SqlServer.Exceptions;
+using DotNetMessenger.Logger;
 using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
+using DotNetMessenger.WebApi.Filters.Logging;
 using DotNetMessenger.WebApi.Models;
 using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Controllers
 {
     [RoutePrefix("api/users")]
+    [ExpectedExceptionsFilter]
     [TokenAuthentication]
     [Authorize]
     public class UsersController : ApiController
@@ -32,20 +31,27 @@ namespace DotNetMessenger.WebApi.Controllers
         [HttpGet]
         public User GetUserById(int id)
         {
+            NLogger.Logger.Debug("Called with argument UID:{0}", id);
             var user = RepositoryBuilder.UsersRepository.GetUser(id);
-            if (user == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
-
+            NLogger.Logger.Debug("Fetched user with id {0}", id);
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Warn("Could not get user principal");
                 return user;
+            }
             var principal = (UserPrincipal) Thread.CurrentPrincipal;
 
-            if (principal.UserId == id) return user;
+            if (principal.UserId == id)
+            {
+                NLogger.Logger.Info("Fetched user with id {0}. The user is the caller", id);
+                return user;
+            }
 
             // if the user performing the request is getting information about other user
             // then we should not give out confidential info
             user.ChatUserInfos = null;
             user.Chats = null;
+            NLogger.Logger.Info("Fetched user with id {0}. THe user is not the caller", id);
             return user;
         }
         /// <summary>
@@ -58,18 +64,26 @@ namespace DotNetMessenger.WebApi.Controllers
         [HttpGet]
         public User GetUserByUsername(string username)
         {
+            NLogger.Logger.Debug("Called with argument userName:\"{0}\"", username);
             var user = RepositoryBuilder.UsersRepository.GetUserByUsername(username);
-            if (user == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
+            NLogger.Logger.Debug("Fetched user with username {0}", username);
 
             if (!(Thread.CurrentPrincipal is UserPrincipal))
+            {
+                NLogger.Logger.Warn("Could not get user principal");
                 return user;
+            }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
 
-            if (principal.UserId == user.Id) return user;
+            if (principal.UserId == user.Id)
+            {
+                NLogger.Logger.Info("Fetched user with username {0}. The user is the caller", username);
+                return user;
+            }
 
             user.ChatUserInfos = null;
             user.Chats = null;
+            NLogger.Logger.Info("Fetched user with username {0}. THe user is not the caller", username);
             return user;
         }
         /// <summary>
@@ -82,15 +96,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public IEnumerable<Chat> GetUserChats(int id)
         {
-            var chats = RepositoryBuilder.ChatsRepository.GetUserChats(id);
-            try
+            NLogger.Logger.Debug("Called with argument UID:{0}", id);
+
+            using (var timeLogger = new ChronoLogger("Fetching chats of UID:{0}", id))
             {
+                timeLogger.Start();
+                var chats = RepositoryBuilder.ChatsRepository.GetUserChats(id);
                 var userChats = chats as Chat[] ?? chats.ToArray();
+                NLogger.Logger.Info("Chats of user {0} successfully fetched. Total fetched: {1}",
+                    id, userChats.Length);
                 return userChats;
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
             }
         }
         /// <summary>
@@ -103,10 +118,18 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserNameIsNameFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public IEnumerable<Chat> GetUserChatsByUsername(string username)
         {
-            var user = RepositoryBuilder.UsersRepository.GetUserByUsername(username);
-            if (user == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, "No user found"));
-            return RepositoryBuilder.ChatsRepository.GetUserChats(user.Id);
+            NLogger.Logger.Debug("Called with argument username:\"{0}\"", username);
+            using (var timeLogger = new ChronoLogger("{0}: Fetching chats of user \"{1\"",
+                nameof(GetUserChatsByUsername), username))
+            {
+                timeLogger.Start();
+                var user = RepositoryBuilder.UsersRepository.GetUserByUsername(username);
+                var chats = RepositoryBuilder.ChatsRepository.GetUserChats(user.Id);
+                var userChats = chats as Chat[] ?? chats.ToArray();
+                NLogger.Logger.Info("Chats of user \"{0}\" successfully fetched. Total fetched: {1}",
+                    username, userChats.Length);
+                return userChats;
+            }
         }
         /// <summary>
         /// Creates a new user from <paramref name="userCredentials"/>. Does not require authentication.
@@ -118,15 +141,11 @@ namespace DotNetMessenger.WebApi.Controllers
         [AllowAnonymous]
         public User CreateUser([FromBody] UserCredentials userCredentials)
         {
-            try
-            {
-                var hash = PasswordHasher.PasswordToHash(userCredentials.Password);
-                return RepositoryBuilder.UsersRepository.CreateUser(userCredentials.Username, hash);
-            }
-            catch (UserAlreadyExistsException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict, "User already exists"));
-            }
+            NLogger.Logger.Debug("Called with argument \"{0}\"", userCredentials.Username);
+            var hash = PasswordHasher.PasswordToHash(userCredentials.Password);
+            var user =  RepositoryBuilder.UsersRepository.CreateUser(userCredentials.Username, hash);
+            NLogger.Logger.Info("Successfully created user with username \"{0}\"", userCredentials.Username);
+            return user;
         }
         /// <summary>
         /// Deletes user given their <paramref name="id"/>. User performing the request must be the same as <paramref name="id"/>
@@ -137,13 +156,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public void DeleteUser(int id)
         {
-            try
+            NLogger.Logger.Debug("Called with argument {0}", id);
+            using (var timeLogger = new ChronoLogger("Deleting user with UID: {0}", id))
             {
+                timeLogger.Start();
                 RepositoryBuilder.UsersRepository.DeleteUser(id);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(HttpStatusCode.NotFound);
+                NLogger.Logger.Info("Successfully deleted user UID: {0}", id);
             }
         }
         /// <summary>
@@ -155,9 +173,9 @@ namespace DotNetMessenger.WebApi.Controllers
         [HttpGet]
         public UserInfo GetUserInfo(int id)
         {
+            NLogger.Logger.Debug("Called with argument {0}", id);
             var userInfo = RepositoryBuilder.UsersRepository.GetUserInfo(id);
-            if (userInfo == null)
-                throw new HttpResponseException(HttpStatusCode.NotFound);
+            NLogger.Logger.Info("Successfully fetched user info for UID: {0}", id);
             return userInfo;
         }
         /// <summary>
@@ -170,14 +188,9 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public void DeleteUserInfo(int id)
         {
-            try
-            {
-                RepositoryBuilder.UsersRepository.DeleteUserInfo(id);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(HttpStatusCode.NotFound);
-            }
+            NLogger.Logger.Debug("Called with argument {0}", id);
+            RepositoryBuilder.UsersRepository.DeleteUserInfo(id);
+            NLogger.Logger.Info("Successfully fetched user info for UID: {0}", id);
         }
         /// <summary>
         /// Sets information about the specified user. User that is performing the request must be the same as <paramref name="id"/>
@@ -189,18 +202,9 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public void SetUserInfo(int id, [FromBody] UserInfo userInfo)
         {
-            try
-            {
-                RepositoryBuilder.UsersRepository.SetUserInfo(id, userInfo);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotAcceptable, "No userInfo provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(HttpStatusCode.NotFound);
-            }
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", id, userInfo);
+            RepositoryBuilder.UsersRepository.SetUserInfo(id, userInfo);
+            NLogger.Logger.Info("Successfully set user info for UID: {0}. Info: {1}", id, userInfo);
         }
         /// <summary>
         /// Updates user info (including username) about the user. User performing the request must be
@@ -214,24 +218,14 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public User PersistUser(int id, [FromBody] User user)
         {
-            try
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", id, user);
+            using (var timeLogger = new ChronoLogger("Persisting user with id {0}", id))
             {
+                timeLogger.Start();
                 user.Id = id;
-                return RepositoryBuilder.UsersRepository.PersistUser(user);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotAcceptable,
-                    "No user provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotAcceptable,
-                    "Invalid id"));
-            }
-            catch (UserAlreadyExistsException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict, "User already exists"));
+                var newUser = RepositoryBuilder.UsersRepository.PersistUser(user);
+                NLogger.Logger.Info("Successfully persisted user with id: {0}", id);
+                return newUser;
             }
         }
         /// <summary>
@@ -244,21 +238,10 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIdIsIdFromUriAuthorization(RegexString = @".*\/users\/([^\/]+)\/?")]
         public void SetPassword(int id, [FromBody] string newPassword)
         {
-            try
-            {
-                var hash = PasswordHasher.PasswordToHash(newPassword);
-                RepositoryBuilder.UsersRepository.SetPassword(id, hash);
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotAcceptable,
-                    "No password provided"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotAcceptable,
-                    "Invalid id"));
-            }
+            NLogger.Logger.Debug("Called with arguments: {0}", id);
+            var hash = PasswordHasher.PasswordToHash(newPassword);
+            RepositoryBuilder.UsersRepository.SetPassword(id, hash);
+            NLogger.Logger.Info("Successfully set password for UID: {0}", id);
         }
     }
 }

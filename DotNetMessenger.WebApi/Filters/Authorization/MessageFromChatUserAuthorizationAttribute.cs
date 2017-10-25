@@ -1,11 +1,11 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WebApi.Principals;
@@ -29,43 +29,52 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
         {
             try
             {
+                NLogger.Logger.Debug("Authorizing user if message sender is in chat");
                 if (string.IsNullOrEmpty(RegexString))
                 {
+                    NLogger.Logger.Fatal("RegexString to get message id is not set. Cannot authorize");
                     Challenge(actionContext);
                     return;
                 }
 
                 // extract string matching regex
+                NLogger.Logger.Debug("Parsing message id using regex {0}", RegexString);
                 var r = new Regex(RegexString);
                 var m = r.Match(actionContext.Request.RequestUri.AbsolutePath);
                 // if there is any content
                 if (!m.Success)
                 {
+                    NLogger.Logger.Error("Failed to parse message id from uri");
                     Challenge(actionContext);
                     return;
                 }
                 // parse it to message id
+                NLogger.Logger.Debug("Parsing string messageId to int");
                 var messageId = int.Parse(m.Groups[1].Value);
 
                 // get principal
-                var principal = Thread.CurrentPrincipal as UserPrincipal;
-                if (principal == null)
+                if (!(Thread.CurrentPrincipal is UserPrincipal principal))
                 {
+                    NLogger.Logger.Fatal("Principal is not set. User is not authenticated?");
                     Challenge(actionContext);
                     return;
                 }
 
                 // check if principal user id is the same as the id extracted from uri
+                NLogger.Logger.Debug("Fetching message from repository. MessageID: {0}", messageId);
                 var message = RepositoryBuilder.MessagesRepository.GetMessage(messageId);
 
+                NLogger.Logger.Debug("Fetching user role from repository. UserID: {0}", principal.UserId);
                 var chatInfo = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(principal.UserId, message.ChatId);
                 var userRole = chatInfo?.Role ?? RepositoryBuilder.ChatsRepository.GetUserRole(UserRoles.Regular);
-
+                NLogger.Logger.Debug("Fetched user role: {0}", userRole);
                 if ((userRole.RolePermissions & RolePermissions.ReadPerm) == 0)
                 {
+                    NLogger.Logger.Error("User {0} does not have read permissions. Forbidden", principal.UserId);
                     Challenge(actionContext);
                     return;
                 }
+                NLogger.Logger.Debug("Authorization of user {0} is successful", principal.UserId);
                 base.OnAuthorization(actionContext);
             }
             catch
@@ -77,6 +86,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
 
         protected void Challenge(HttpActionContext actionContext)
         {
+            NLogger.Logger.Debug("Adding challenge");
             actionContext.Response = actionContext.Request.CreateResponse(HttpStatusCode.Unauthorized);
             actionContext.Response.Headers.Add("WWW-Authenticate", $"Basic realm=\"{Realm}\"");
         }

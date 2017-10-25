@@ -3,6 +3,7 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.Logger;
 using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Principals;
 
@@ -16,12 +17,20 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
     {
         protected override async Task<IPrincipal> Authenticate(string userName, string password, CancellationToken cancellationToken)
         {
+            NLogger.Logger.Debug("Authenticating user by login and pass. Login: \"{0}\"", userName);
             // check for username and password
-            var user = await RepositoryBuilder.UsersRepository.GetUserByUsernameAsync(userName);
-            if (user == null)
+            try
+            {
+                var user = await RepositoryBuilder.UsersRepository.GetUserByUsernameAsync(userName);
+                var storedPassword = RepositoryBuilder.UsersRepository.GetPassword(user.Id);
+                return PasswordHasher.ComparePasswordToHash(password, storedPassword) ? null : new UserPrincipal(user.Id, userName, Guid.Empty);
+            }
+            catch (ArgumentException)
+            {
+                NLogger.Logger.Error("Authentication failed");
                 return null;
-            var storedPassword = RepositoryBuilder.UsersRepository.GetPassword(user.Id);
-            return PasswordHasher.ComparePasswordToHash(password, storedPassword) ? null : new UserPrincipal(user.Id, userName, Guid.Empty);
+            }
+            
         }
     }
 }

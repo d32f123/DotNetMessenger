@@ -10,6 +10,7 @@ using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
+using DotNetMessenger.WebApi.Filters.Logging;
 using DotNetMessenger.WebApi.Models;
 using DotNetMessenger.WebApi.Principals;
 using NLog;
@@ -17,6 +18,7 @@ using NLog;
 namespace DotNetMessenger.WebApi.Controllers
 {
     [RoutePrefix("api/chats")]
+    [ExpectedExceptionsFilter]
     [TokenAuthentication]
     [Authorize]
     public class ChatsController : ApiController
@@ -34,10 +36,12 @@ namespace DotNetMessenger.WebApi.Controllers
         public Chat GetChatById(int id)
         {
             using (var timeLog =
-                new ChronoLogger(LogLevel.Info, "{0}: Deleting chat with id: {1}", nameof(DeleteChat), id))
+                new ChronoLogger(LogLevel.Debug, "Fetching chat with id: {0}", id))
             {
                 timeLog.Start();
-                return RepositoryBuilder.ChatsRepository.GetChat(id);
+                var chat = RepositoryBuilder.ChatsRepository.GetChat(id);
+                NLogger.Logger.Info("Fetched chat with id {0}", id);
+                return chat;
             }
         }
         /// <summary>
@@ -49,55 +53,60 @@ namespace DotNetMessenger.WebApi.Controllers
         [HttpPost]
         public Chat CreateChat([FromBody] ChatCredentials chatCredentials)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(CreateChat), chatCredentials);
+            NLogger.Logger.Debug("Called with arguments: {0}", chatCredentials);
             if (chatCredentials.Members == null)
             {
-                NLogger.Logger.Error("{0}: {1} is null", nameof(CreateChat), nameof(chatCredentials));
+                NLogger.Logger.Error("{0} is null", nameof(chatCredentials));
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest, "No members"));
             }
             // check if current user is in chat
             if (!(Thread.CurrentPrincipal is UserPrincipal))
             {
-                NLogger.Logger.Fatal("{0}: No principal set", nameof(CreateChat));
+                NLogger.Logger.Fatal("No principal set");
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
                     "Server broken"));
             }
             var principal = (UserPrincipal) Thread.CurrentPrincipal;
             if (!chatCredentials.Members.Contains(principal.UserId))
             {
-                NLogger.Logger.Error("{0}: {1} does not contain the person who is creating the chat",
-                    nameof(CreateChat), nameof(chatCredentials.Members));
+                NLogger.Logger.Error("{0} does not contain the person who is creating the chat",
+                    nameof(chatCredentials.Members));
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized,
                     "Cannot create chat not including yourself"));
             }
-            NLogger.Logger.Debug("{0}: Converting {1} to array", nameof(CreateChat), nameof(chatCredentials.Members));
+            NLogger.Logger.Debug("Converting {0} to array", nameof(chatCredentials.Members));
             var members = chatCredentials.Members as int[] ?? chatCredentials.Members.ToArray();
+            Chat chat;
             switch (chatCredentials.ChatType)
             {
                 case ChatTypes.Dialog:
                     if (members.Length != 2)
                     {
-                        NLogger.Logger.Error("{0}: Trying to create dialog but number of users != 2", nameof(CreateChat));
+                        NLogger.Logger.Error("Trying to create dialog but number of users != 2");
                         throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
                             "Dialog requires 2 users"));
                     }
-                    using (var timeLog = new ChronoLogger("{0}: Creating dialog chat with parameters: {1}",
-                        nameof(CreateChat), members))
+                    using (var timeLog = new ChronoLogger("Creating dialog chat with parameters: {0}",
+                        members))
                     {
                         timeLog.Start();
-                        return RepositoryBuilder.ChatsRepository.CreateDialog(members[0], members[1]);
+                        chat = RepositoryBuilder.ChatsRepository.CreateDialog(members[0], members[1]);
+                        NLogger.Logger.Info("Dialog chat created. Id: {0}, Member1: {1}, Member2: {2}", chat.Id, members[0], members[1]);
+                        return chat;
                     }
                 case ChatTypes.GroupChat:
                 {
-                    using (var timeLog = new ChronoLogger("{0}: Creating group chat with parameters: {1}",
-                        nameof(CreateChat), members))
+                    using (var timeLog = new ChronoLogger("Creating group chat with parameters: {0}",
+                        members))
                     {
-                            timeLog.Start();
-                        return RepositoryBuilder.ChatsRepository.CreateGroupChat(members, chatCredentials.Title);
+                        timeLog.Start();
+                        chat = RepositoryBuilder.ChatsRepository.CreateGroupChat(members, chatCredentials.Title);
+                        NLogger.Logger.Info("Group chat created. Id: {0}, Members: {1}", chat.Id, members);
+                        return chat;
                     }
                 }
                 default:
-                    NLogger.Logger.Error("{0}: Unknown chat type: {1}", nameof(CreateChat), chatCredentials.ChatType);
+                    NLogger.Logger.Error("Unknown chat type: {0}", chatCredentials.ChatType);
                     throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
                         "Invalid chat type"));
             }
@@ -111,11 +120,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void DeleteChat(int id)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(DeleteChat), id);
-            using (var timeLog = new ChronoLogger("{0}: Deleting chat with id: {1}", nameof(DeleteChat), id))
+            NLogger.Logger.Debug("Called with arguments: {0}", id);
+            using (var timeLog = new ChronoLogger("Deleting chat with id: {0}", id))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.DeleteChat(id);
+                NLogger.Logger.Info("Deleted chat with id {0}", id);
             }
         }
         /// <summary>
@@ -128,11 +138,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public ChatInfo GetChatInfo(int id)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(GetChatInfo), id);
-            using (var timeLog = new ChronoLogger("{0}: Fetching chat info for id: {1}", nameof(GetChatInfo), id))
+            NLogger.Logger.Debug("Called with arguments: {0}", id);
+            using (var timeLog = new ChronoLogger("Fetching chat info for id: {0}", id))
             {
                 timeLog.Start();
-                return RepositoryBuilder.ChatsRepository.GetChatInfo(id);
+                var chatInfo = RepositoryBuilder.ChatsRepository.GetChatInfo(id);
+                NLogger.Logger.Info("Fetched chat info for chat {0}", id);
+                return chatInfo;
             }
         }
         /// <summary>
@@ -144,11 +156,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
         public void DeleteChatInfo(int id)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(DeleteChatInfo), id);
-            using (var timeLog = new ChronoLogger("{0}: Deleting chat info for id: {1}", nameof(DeleteChatInfo), id))
+            NLogger.Logger.Debug("Called with arguments: {0}", id);
+            using (var timeLog = new ChronoLogger("Deleting chat info for id: {0}", id))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.DeleteChatInfo(id);
+                NLogger.Logger.Info("Deleted chat info for id: {0}", id);
             }
         }
         /// <summary>
@@ -161,12 +174,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ChatInfoPerm)]
         public void SetChatInfo(int id, [FromBody] ChatInfo chatInfo)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(SetChatInfo), id, chatInfo);
-            using (var timeLog = new ChronoLogger("{0}: Setting chat info for id {1}. Info: {2}", nameof(SetChatInfo),
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", id, chatInfo);
+            using (var timeLog = new ChronoLogger("Setting chat info for id {0}. Info: {1}",
                 id, chatInfo))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatInfo(id, chatInfo);
+                NLogger.Logger.Info("Successfuly set chat info for id: {0}. Info: {1}", id, chatInfo);
             }
         }
         /// <summary>
@@ -179,12 +193,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public User[] GetChatUsers(int id)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(GetChatUsers), id);
-            using (var timeLog = new ChronoLogger("{0}: Fetching chat users for id: {1}", nameof(GetChatUsers), id))
+            NLogger.Logger.Debug("Called with arguments: {0}", id);
+            using (var timeLog = new ChronoLogger("Fetching chat users for id: {0}", id))
             {
                 timeLog.Start();
                 var users = RepositoryBuilder.ChatsRepository.GetChatUsers(id) as User[] ??
                             RepositoryBuilder.ChatsRepository.GetChatUsers(id).ToArray();
+                NLogger.Logger.Info("Successfully fetched chat users of chat: {0}", id);
                 return users;
             }
         }
@@ -198,11 +213,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void AddUser(int chatId, int userId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(AddUser), chatId, userId);
-            using (var timeLog = new ChronoLogger("{0}: Adding user {1} to chat {2}", nameof(AddUser), userId, chatId))
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, userId);
+            using (var timeLog = new ChronoLogger("Adding user {0} to chat {1}", userId, chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.AddUser(chatId, userId);
+                NLogger.Logger.Info("Successfully added user {0} to chat {1}", userId, chatId);
             }
         }
         /// <summary>
@@ -215,11 +231,12 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void KickUser(int chatId, int userId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(KickUser), chatId, userId);
-            using (var timeLog = new ChronoLogger("{0}: Kicking user {1} from chat {2}", nameof(KickUser), userId, chatId))
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, userId);
+            using (var timeLog = new ChronoLogger("Kicking user {0} from chat {1}", userId, chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.KickUser(chatId, userId);
+                NLogger.Logger.Info("Successfully kicked user {0} from chat {1}", userId, chatId);
             }
         }
         /// <summary>
@@ -233,12 +250,13 @@ namespace DotNetMessenger.WebApi.Controllers
         public void AddUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {
             var newUsers = userIds as int[] ?? userIds.ToArray();
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(AddUsers), chatId, newUsers);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, newUsers);
             using (var timeLog =
-                new ChronoLogger("{0}: Adding users {1} to chat {2}", nameof(AddUsers), userIds, chatId))
+                new ChronoLogger("Adding users {0} to chat {1}", userIds, chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.AddUsers(chatId, newUsers);
+                NLogger.Logger.Info("Successfully added users to chat {0}. Users: {1}", chatId, newUsers);
             }
         }
         /// <summary>
@@ -252,12 +270,13 @@ namespace DotNetMessenger.WebApi.Controllers
         public void KickUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {
             var kickedUsers = userIds as int[] ?? userIds.ToArray();
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(KickUsers), chatId, kickedUsers);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, kickedUsers);
             using (var timeLog =
-                new ChronoLogger("{0}: Kicking users {1} from chat {2}", nameof(KickUsers), userIds, chatId))
+                new ChronoLogger("Kicking users {0} from chat {1}", userIds, chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.KickUsers(chatId, kickedUsers);
+                NLogger.Logger.Info("Successfully kicked users from chat {0}. Users: {1}", chatId, kickedUsers);
             }
         }
         /// <summary>
@@ -271,12 +290,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [UserIsChatCreatorAuthorization(RegexString = RegexString)]
         public void SetCreator(int chatId, int userId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(SetCreator), chatId, userId);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, userId);
             using (var timeLog =
-                new ChronoLogger("{0}: Setting creator for chat {2}. UserID: {1}", nameof(SetCreator), userId, chatId))
+                new ChronoLogger("Setting creator for chat {1}. UserID: {0}", userId, chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetCreator(chatId, userId);
+                NLogger.Logger.Info("Successfully set new creator for chat {0}. New creator: {1}", chatId, userId);
             }
         }
         /// <summary>
@@ -290,13 +310,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public ChatUserInfo GetChatSpecificUserInfo(int chatId, int userId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(GetChatSpecificUserInfo), chatId, userId);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, userId);
             using (var timeLog =
-                new ChronoLogger("{0}: Fetching chat-specific user info for userId: {1} in chatId: {2}",
-                    nameof(GetChatSpecificUserInfo), userId, chatId))
+                new ChronoLogger("Fetching chat-specific user info for userId: {0} in chatId: {1}",
+                    userId, chatId))
             {
                 timeLog.Start();
-                return RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId);
+                var chatUserInfo = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId);
+                NLogger.Logger.Info("Successfully fetched chat-specific user info for user {0} in chat {1}",
+                    userId, chatId);
+                return chatUserInfo;
             }
         }
         /// <summary>
@@ -309,13 +332,15 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void DeleteChatSpecificUserInfo(int chatId, int userId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(DeleteChatSpecificUserInfo), chatId, userId);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, userId);
             using (var timeLog =
-                new ChronoLogger("{0}: Deleting chat-specific user info for userId: {1} in chatId: {2}",
-                    nameof(DeleteChatSpecificUserInfo), userId, chatId))
+                new ChronoLogger("Deleting chat-specific user info for userId: {0} in chatId: {1}",
+                    userId, chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.DeleteChatSpecificInfo(userId, chatId);
+                NLogger.Logger.Info("Successfully deleted chat-specific user info for user {0} in chat {1}",
+                    userId, chatId);
             }
         }
         /// <summary>
@@ -329,15 +354,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void SetChatSpecificUserInfo(int chatId, int userId, [FromBody] ChatUserInfo chatUserInfo)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}, {3}", nameof(SetChatSpecificUserInfo), chatId,
-                userId, chatUserInfo);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}, {2}", chatId, userId, chatUserInfo);
             using (var timeLog =
-                new ChronoLogger("{0}: Setting chat-specific user info for userId: {1}, in chatId: {2}, info: {3}",
-                    nameof(SetChatSpecificUserInfo), userId, chatId, chatUserInfo))
+                new ChronoLogger("Setting chat-specific user info for userId: {0}, in chatId: {1}, info: {2}",
+                    userId, chatId, chatUserInfo))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(userId, chatId, chatUserInfo,
                     chatUserInfo.Role != null);
+                NLogger.Logger.Info("Successfully set chat-specific user info for user {0} in chat {1}. Info: {2}",
+                    userId, chatId, chatUserInfo);
             }
         }
         /// <summary>
@@ -352,14 +378,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public ChatUserInfo SetChatSpecificUserRole(int chatId, int userId, int roleId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}, {3}", nameof(SetChatSpecificUserRole), chatId,
-                userId, roleId);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}, {2}", chatId, userId, roleId);
             using (var timeLog =
-                new ChronoLogger("{0}: Setting chat-specific user role for userId: {1}, in chatId: {2}, role: {3}",
-                    nameof(SetChatSpecificUserRole), userId, chatId, roleId))
+                new ChronoLogger("Setting chat-specific user role for userId: {0}, in chatId: {1}, role: {2}",
+                    userId, chatId, roleId))
             {
                 timeLog.Start();
-                return RepositoryBuilder.ChatsRepository.SetChatSpecificRole(userId, chatId, (UserRoles) roleId);
+                var chatUserInfo = RepositoryBuilder.ChatsRepository.SetChatSpecificRole(userId, chatId, (UserRoles) roleId);
+                NLogger.Logger.Info("Successfully set chat-specific user role for user {0} in chat {1}. Role: {2}",
+                    userId, chatId, roleId);
+                return chatUserInfo;
             }
         }
         /// <summary>
@@ -373,20 +401,21 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public void SetChatUserInfoForCurrentUser(int chatId, [FromBody] ChatUserInfo chatUserInfo)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}, {2}", nameof(SetChatUserInfoForCurrentUser), chatId, chatUserInfo);
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, chatUserInfo);
             if (!(Thread.CurrentPrincipal is UserPrincipal))
             {
-                NLogger.Logger.Fatal("{0}: No principal set", nameof(SetChatUserInfoForCurrentUser));
+                NLogger.Logger.Fatal("No principal set");
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
                     "Server broken"));
             }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
             using (var timeLog =
-                new ChronoLogger("{0}: Setting chat-specific user info for caller, chatId: {1}, role: {2}",
-                    nameof(SetChatUserInfoForCurrentUser), chatId, chatUserInfo))
+                new ChronoLogger("Setting chat-specific user info for caller, chatId: {0}, info: {1}", chatId, chatUserInfo))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(principal.UserId, chatId, chatUserInfo);
+                NLogger.Logger.Info("Successfully set chat-specific user info for caller in chat {0}. Info: {1}",
+                    chatId, chatUserInfo);
             }
         }
         /// <summary>
@@ -398,17 +427,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString)]
         public void ClearChatUserInfoForCurrentUser(int chatId)
         {
-            NLogger.Logger.Debug("{0}: Called with arguments: {1}", nameof(ClearChatUserInfoForCurrentUser), chatId);
+            NLogger.Logger.Debug("Called with arguments: {0}", chatId);
             if (!(Thread.CurrentPrincipal is UserPrincipal))
             {
-                NLogger.Logger.Fatal("{0}: No principal set", nameof(ClearChatUserInfoForCurrentUser));
+                NLogger.Logger.Fatal("No principal set");
                 throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.InternalServerError,
                     "Server broken"));
             }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
             using (var timeLog =
-                new ChronoLogger("{0}: Clearing chat-specific user info for caller, chatId: {1}",
-                    nameof(SetChatUserInfoForCurrentUser), chatId))
+                new ChronoLogger("Clearing chat-specific user info for caller, chatId: {0}", chatId))
             {
                 timeLog.Start();
                 RepositoryBuilder.ChatsRepository.SetChatSpecificInfo(principal.UserId, chatId, new ChatUserInfo
@@ -416,6 +444,7 @@ namespace DotNetMessenger.WebApi.Controllers
                     Nickname = null,
                     Role = null
                 });
+                NLogger.Logger.Info("Successfully cleared chat-specific user info for caller in chat {0}", chatId);
             }
         }
     }

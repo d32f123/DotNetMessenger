@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Transactions;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
+using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 
@@ -68,6 +69,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                                 message.Id = reader.GetInt32(reader.GetOrdinal("ID"));
                                 message.Date = reader.GetDateTime(reader.GetOrdinal("MessageDate"));
                             }
+                            NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (ChatID:{1}, SenderID:{2}, MessageText:{3})", "[Messages]", chatId, senderId, text ?? "");
                         }
                         catch (SqlException)
                         {
@@ -99,6 +101,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                                 command.Parameters.Add(attachFile);
 
                                 attachment.Id = (int) command.ExecuteScalar();
+                                NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (Type:{1}, MessageID:{2}, AttachFile:{3})", "[Attachments]", attachment.Type, message.Id, attachment.File);
                             }
                     }
                     scope.Complete();
@@ -144,6 +147,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.Parameters.AddWithValue("@expireDate", expirationDate);
 
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (MessageID:{1}, ExpireDate:{2})", "[MessageDeleteQueue]", message.Id, expirationDate);
+
                     }
 
                     scope.Complete();
@@ -157,7 +162,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// Ret value can be null
         /// </summary>
         /// <param name="messageId">The id of the message</param>
-        /// <returns>Null if no object found, else <see cref="Message"/> object representing persisted message</returns>
+        /// <returns><see cref="Message"/> object representing persisted message</returns>
+        /// <exception cref="ArgumentException">Throws if id is invalid</exception>
         public Message GetMessage(int messageId)
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -173,7 +179,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows)
-                            return null;
+                            throw new ArgumentException();
                         reader.Read();
                         return new MessageSqlProxy
                         {

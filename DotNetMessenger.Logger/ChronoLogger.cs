@@ -15,10 +15,10 @@ namespace DotNetMessenger.Logger
         private readonly object[] _formatValues;
         private readonly string _timerStopString;
 
-        public ChronoLogger(string format, params object[] objects) : this(LogLevel.Info, format, objects) {}
+        public ChronoLogger(string format, params object[] objects) : this(LogLevel.Debug, format, objects) { }
 
-        public ChronoLogger(LogLevel logLevel, string format, params object[] objects) 
-            : this(TimerStartDefault, TimerStopDefault, logLevel, format, objects) {}
+        public ChronoLogger(LogLevel logLevel, string format, params object[] objects)
+            : this(TimerStartDefault, TimerStopDefault, logLevel, format, objects) { }
 
         public ChronoLogger(string tStart, string tEnd, LogLevel logLevel, string format, params object[] objects)
         {

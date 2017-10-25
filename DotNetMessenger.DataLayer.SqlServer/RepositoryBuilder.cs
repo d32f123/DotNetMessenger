@@ -33,7 +33,6 @@
                 if (_usersRepository == null)
                     _usersRepository = new UsersRepository(_connectionString);
                 _chatsRepository = new ChatsRepository(_connectionString, _usersRepository);
-                _usersRepository.ChatsRepository = _chatsRepository;
                 return _chatsRepository;
             }
         }
@@ -45,7 +44,7 @@
                 if (_usersRepository != null) return _usersRepository;
                 if (_chatsRepository == null)
                     _chatsRepository = new ChatsRepository(_connectionString);
-                _usersRepository = new UsersRepository(_connectionString, _chatsRepository);
+                _usersRepository = new UsersRepository(_connectionString);
                 _chatsRepository.UsersRepository = _usersRepository;
                 return _usersRepository;
             }

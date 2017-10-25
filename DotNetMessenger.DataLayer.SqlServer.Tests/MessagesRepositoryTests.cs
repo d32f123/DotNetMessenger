@@ -237,9 +237,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var msg = _messagesRepository.StoreTemporaryMessage(_userId, _chatId, text, expirationDate);
             Thread.Sleep(1000);
             _messagesRepository.DeleteExpiredMessages();
-            msg = _messagesRepository.GetMessage(msg.Id);
-            // assert
-            Assert.IsNull(msg);
+            Assert.ThrowsException<ArgumentException>(() => _messagesRepository.GetMessage(msg.Id));
         }
 
         [TestMethod]

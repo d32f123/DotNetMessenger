@@ -9,6 +9,7 @@ using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
+using DotNetMessenger.Logger;
 
 
 namespace DotNetMessenger.DataLayer.SqlServer
@@ -64,7 +65,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     {
                         throw new ArgumentException();
                     }
-            }
+                }
+                NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUsers]", userId, chatId);
                 // make an entry in chatuserinfos table
                 using (var command = connection.CreateCommand())
                 {
@@ -76,6 +78,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     command.ExecuteNonQuery();
                 }
+                NLogger.Logger.Trace("DB:Inserted into {0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUserInfos]", userId, chatId);
             }
             
         }
@@ -124,8 +127,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         throw new ArgumentException();
                     }
                 }
+                NLogger.Logger.Trace("DB:Called stored procedure {0}: ChatID:{1}", "[AddUsersToChat]", chatId);
+
             }
-            
+
         }
         /// <inheritdoc />
         /// <summary>
@@ -218,6 +223,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         }
                     }
 
+                    NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (ChatType:{1}, CreatorID:{2})", "[Chats]", chat.ChatType, chat.CreatorId);
+
                     // Add users to chat
                     foreach (var userId in userIds)
                     {
@@ -238,6 +245,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                                 throw new ArgumentException();
                             }
                         }
+                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUsers]", userId, chat.Id);
                         using (var command = connection.CreateCommand())
                         {
                             command.CommandText =
@@ -248,6 +256,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                             command.ExecuteNonQuery();
                         }
+                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUserInfos]", userId, chat.Id);
                     }
 
                     // Add chat title
@@ -262,6 +271,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.ExecuteNonQuery();
                     }
 
+                    NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (ChatID:{1}, Title:{2})", "[ChatInfos]", chat.Id, chatInfo.Title);
                     if (chatType != ChatTypes.Dialog)
                         SetChatSpecificRole(userIds[0], chat.Id, UserRoles.Moderator);
 
@@ -305,10 +315,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <exception cref="T:System.ArgumentException">Throws if id is invalid</exception>
         public void DeleteChat(int chatId)
         {
-            
             using (var connection = new SqlConnection(_connectionString))
-            {
-                    
+            {   
                 connection.Open();
                 // Delete chat, ChatUsers entries should cascade
                 using (var command = connection.CreateCommand())
@@ -320,8 +328,9 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentException();
                 }
+                NLogger.Logger.Trace("DB:Deleted:{0}:By (ChatID:{1})", "[Chats]", chatId);
             }
-            
+
         }
         /// <inheritdoc />
         /// <summary>
@@ -348,6 +357,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentNullException();
                 }
+                NLogger.Logger.Trace("DB:Deleted:{0}:By (ChatID:{1})", "[ChatInfos]", chatId);
             }
             
         }
@@ -458,6 +468,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentException();
+                    NLogger.Logger.Trace("DB:Deleted:{0}:By (ChatID:{1}, UserID:{2})", "[ChatUsers]", chatId, userId);
                 }
             }
         }
@@ -499,6 +510,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.Parameters.AddWithValue("@ChatID", chatId);
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentException();
+                    NLogger.Logger.Trace("DB:Called stored procedure:{0}", "[KickUsersFromChat]");
                 }
             }
         }
@@ -547,6 +559,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     command.Parameters.Add(avatar);
 
                     command.ExecuteNonQuery();
+                    NLogger.Logger.Trace("DB:Updated:{0}:VALUES (Title:{1}, Avatar:{2}) WHERE ChatID:{3}",
+                        "[ChatInfos]", info.Title ?? "", info.Avatar ?? Encoding.UTF8.GetBytes(""), chatId);
                 }
             }
         }
@@ -630,6 +644,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.Parameters.AddWithValue("@newCreator", newCreator);
 
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace("DB:Updated:{0}:VALUES (CreatorID:{1}) WHERE ChatID:{2}", "[Chats]", newCreator, chatId);
                     }
                 }
 
@@ -780,6 +795,9 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     try
                     {
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace(
+                            "DB:Updated:{0}:VALUES (Nickname:{3}" + (updateRole ? "UserRole:{4}" : "") +
+                            ") WHERE ChatID:{1}, UserID:{2}", "[ChatUserInfos]", userId, chatId, userInfo.Nickname, userInfo.Role.RoleType);
                     }
                     catch (SqlException)
                     {
@@ -830,6 +848,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     try
                     {
                         command.ExecuteNonQuery();
+                        NLogger.Logger.Trace(
+                            "DB:Updated:{0}:VALUES (UserRole:{3})) WHERE ChatID:{1}, UserID:{2}",
+                            "[ChatUserInfos]", userId, chatId, userRole);
+
                     }
                     catch (SqlException)
                     {
@@ -905,6 +927,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentNullException();
+                    NLogger.Logger.Trace("DB:Deleted:{0}:WHERE UserID:{1} AND ChatID:{2}", "[ChatUserInfos]", userId, chatId);
+
                 }
             }
         }

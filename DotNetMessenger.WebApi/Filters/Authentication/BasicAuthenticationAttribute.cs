@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http.Filters;
+using DotNetMessenger.Logger;
 using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Results;
 
@@ -26,18 +27,23 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             var request = context.Request;
             var authorization = request.Headers.Authorization;
 
+            NLogger.Logger.Debug("Authentication starting");
+
             if (authorization == null)
             {
+                NLogger.Logger.Warn("No authorization header included in the request. Skipping");
                 return;
             }
 
             if (authorization.Scheme != "Basic")
             {
+                NLogger.Logger.Warn("Auth scheme is not {0}. Skipping", "Basic");
                 return;
             }
 
             if (string.IsNullOrEmpty(authorization.Parameter))
             {
+                NLogger.Logger.Error("Credentials missing in the header. Forbidden");
                 context.ErrorResult = new AuthenticationFailureResult("Missing credentials", request);
                 return;
             }
@@ -46,6 +52,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
             if (userNameAndPassword == null)
             {
+                NLogger.Logger.Error("Invalid format of credentials. Forbidden");
                 context.ErrorResult = new AuthenticationFailureResult("Invalid credentials", request);
                 return;
             }
@@ -57,10 +64,12 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
             if (principal == null)
             {
+                NLogger.Logger.Error("Invalid username or password. Forbidden");
                 context.ErrorResult = new AuthenticationFailureResult("Invalid username or password", request);
             }
             else
             {
+                NLogger.Logger.Debug("Successfully authenticated user. Username: \"{0}\"", principal.Identity.Name);
                 HttpContext.Current.User = principal;
                 context.Principal = principal;
                 Thread.CurrentPrincipal = principal;
@@ -72,7 +81,9 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
         public Task ChallengeAsync(HttpAuthenticationChallengeContext context, CancellationToken cancellationToken)
         {
+            NLogger.Logger.Debug("Adding challenge to response");
             Challenge(context);
+            NLogger.Logger.Debug("Added challenge to response");
             return Task.FromResult(0);
         }
 
@@ -97,21 +108,25 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
         private static Tuple<string, string> ExtractUserNameAndPassword(string authorizationParameter)
         {
             var decodedCredentials = authorizationParameter.FromBase64ToString();
-
+            NLogger.Logger.Debug("Credentials decoded from base64");
             if (string.IsNullOrEmpty(decodedCredentials))
             {
+                NLogger.Logger.Debug("Credentials are empty");
                 return null;
             }
 
+            NLogger.Logger.Debug("Splitting username from password");
             var colonIndex = decodedCredentials.IndexOf(':');
 
             if (colonIndex == -1)
             {
+                NLogger.Logger.Warn("No delimeter found");
                 return null;
             }
 
             var userName = decodedCredentials.Substring(0, colonIndex);
             var password = decodedCredentials.Substring(colonIndex + 1);
+            NLogger.Logger.Debug("Successfully extracted username and password");
             return new Tuple<string, string>(userName, password);
         }
     }

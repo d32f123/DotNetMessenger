@@ -16,21 +16,26 @@ namespace DotNetMessenger.WebApi.Filters.Logging
             switch (exception)
             {
                 case ArgumentNullException ane:
-                    NLogger.Logger.Error("{0}: Parameter missing or null: {1}", nameof(ExpectedExceptionsFilterAttribute), ane);
+                    NLogger.Logger.Error("Parameter missing or null: {0}", ane);
                     throw new HttpResponseException(actionExecutedContext.Request.CreateErrorResponse(HttpStatusCode.Conflict,
                         "Required parameter missing or null"));
                 case ArgumentException ae:
-                    NLogger.Logger.Error("{0}: Parameter was invalid: {1}", nameof(ExpectedExceptionsFilterAttribute), ae);
+                    NLogger.Logger.Error("Parameter was invalid: {0}", ae);
                     throw new HttpResponseException(actionExecutedContext.Request.CreateErrorResponse(HttpStatusCode.NotFound,
                         "Some ids are invalid"));
                 case ChatTypeMismatchException ctme:
-                    NLogger.Logger.Error("{0}: Chat type is invalid for the given operation: {1}", nameof(ExpectedExceptionsFilterAttribute), ctme);
+                    NLogger.Logger.Error("Chat type is invalid for the given operation: {0}", ctme);
                     throw new HttpResponseException(actionExecutedContext.Request.CreateErrorResponse(HttpStatusCode.NotFound,
                         "Cannot do that for this chat typ!"));
                 case UserIsCreatorException uice:
-                    NLogger.Logger.Error("{0}: Cannot do this action on chat creator: {1}", nameof(ExpectedExceptionsFilterAttribute), uice);
+                    NLogger.Logger.Error("Cannot do this action on chat creator: {0}", uice);
                     throw new HttpResponseException(actionExecutedContext.Request.CreateErrorResponse(HttpStatusCode.Forbidden,
                         "Cannot perform this action on creator"));
+                case UserAlreadyExistsException uaee:
+                    NLogger.Logger.Error("User already exists: {0}", uaee);
+                    throw new HttpResponseException(
+                        actionExecutedContext.Request.CreateErrorResponse(HttpStatusCode.Conflict,
+                            "User already exists"));
             }
         }
     }

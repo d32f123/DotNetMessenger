@@ -5,14 +5,17 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
+using DotNetMessenger.WebApi.Filters.Logging;
 using DotNetMessenger.WebApi.Models;
 
 namespace DotNetMessenger.WebApi.Controllers
 {
     [RoutePrefix("api/messages")]
+    [ExpectedExceptionsFilter]
     [TokenAuthentication]
     [Authorize]
     public class MessagesController : ApiController
@@ -32,33 +35,42 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.WritePerm)]
         public Message StoreMessage(int chatId, int userId, [FromBody] Message message)
         {
-            try
+            NLogger.Logger.Debug("Called with arguments CID:{0}, UID:{1}, MSG:{2}", chatId, userId, message);
+
+            // if no attach permissions and attachments are not empty
+            if ((RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId).Role.RolePermissions &
+                    RolePermissions.AttachPerm) == 0 &&
+                (message.Attachments == null || message.Attachments.Count() != 0))
             {
-                // if no attach permissions and attachments are not empty
-                if ((RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId).Role.RolePermissions &
-                     RolePermissions.AttachPerm) == 0 &&
-                    (message.Attachments == null || message.Attachments.Count() != 0))
+                NLogger.Logger.Error(
+                    "User does not have enough permissions to store a message! UserID: {0}, ChatID: {1}, Message: {2}",
+                    userId, chatId, message);
+                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized,
+                    "Not enough permissions"));
+            }
+            if (message.ExpirationDate == null)
+            {
+                using (var timeLogger =
+                    new ChronoLogger("Storing message. UID: {0}, CID: {1}, Text: {2}, Attachments: {3}",
+                        userId, chatId, message.Text, message.Attachments))
                 {
-                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Unauthorized,
-                        "Not enough permissions"));
-                }
-                if (message.ExpirationDate == null)
-                {
-                    return RepositoryBuilder.MessagesRepository.StoreMessage(userId, chatId, message.Text,
+                    timeLogger.Start();
+                    var msg = RepositoryBuilder.MessagesRepository.StoreMessage(userId, chatId, message.Text,
                         message.Attachments);
+                    NLogger.Logger.Info("Successfully stored message from UID:{0} to CID:{1}. Message: {2}",
+                        userId, chatId, msg);
+                    return msg;
                 }
-                return RepositoryBuilder.MessagesRepository.StoreTemporaryMessage(userId, chatId, message.Text,
-                    (DateTime)message.ExpirationDate, message.Attachments);
             }
-            catch (ArgumentNullException)
+            using (var timeLogger =
+                new ChronoLogger("Storing message with expiration date. UID: {0}, CID: {1}, Message: {2}",
+                    userId, chatId, message))
             {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.Conflict,
-                    "Text and attachments cannot be both empty"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "Ids are invalid"));
+                timeLogger.Start();
+                var msg = RepositoryBuilder.MessagesRepository.StoreTemporaryMessage(userId, chatId, message.Text,
+                    (DateTime) message.ExpirationDate, message.Attachments);
+                NLogger.Logger.Info("Successfully stored message with e.d from UID: {0} to CID:{1}. Message: {2}", userId, chatId, msg);
+                return msg;
             }
         }
         /// <summary>
@@ -72,21 +84,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [MessageFromChatUserAuthorization(RegexString = RegexString)]
         public Message GetMessage(int messageId)
         {
-            try
+            NLogger.Logger.Debug("Called with argument MID:{0}", messageId);
+            using (var timeLogger = new ChronoLogger("Fetching message with id: {0}", messageId))
             {
+                timeLogger.Start();
                 var message = RepositoryBuilder.MessagesRepository.GetMessage(messageId);
-                if (message == null)
-                {
-                    throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                        "Id is invalid"));
-                }
-
+                NLogger.Logger.Info("Successfully fetched message with id: {0}", messageId);
                 return message;
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "Id is invalid"));
             }
         }
         /// <summary>
@@ -100,16 +104,17 @@ namespace DotNetMessenger.WebApi.Controllers
         [MessageFromChatUserAuthorization(RegexString = RegexString)]
         public IEnumerable<Attachment> GetMessageAttachments(int messageId)
         {
-            try
+            NLogger.Logger.Debug("Called with argument MID:{0}", messageId);
+            using (var timeLogger = new ChronoLogger("Fetching message attachments for message {0}",
+                messageId))
             {
-                var attachments = RepositoryBuilder.MessagesRepository.GetMessageAttachments(messageId) as Attachment[] ??
-                            RepositoryBuilder.MessagesRepository.GetMessageAttachments(messageId).ToArray();
+                timeLogger.Start();
+                var attachments =
+                    RepositoryBuilder.MessagesRepository.GetMessageAttachments(messageId) as Attachment[] ??
+                    RepositoryBuilder.MessagesRepository.GetMessageAttachments(messageId).ToArray();
+                NLogger.Logger.Info("Successfully fetched message attachments for message {0}. Total of {1}",
+                    messageId, attachments.Length);
                 return attachments;
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such message exists"));
             }
         }
         /// <summary>
@@ -123,14 +128,13 @@ namespace DotNetMessenger.WebApi.Controllers
         [MessageFromChatUserAuthorization(RegexString = RegexString)]
         public DateTime? GetMessageExpirationDate(int messageId)
         {
-            try
+            NLogger.Logger.Debug("Called with argument MID:{0}", messageId);
+            using (var timeLogger = new ChronoLogger("Fetching message expiration date for message {0}", messageId))
             {
-                return RepositoryBuilder.MessagesRepository.GetMessageExpirationDate(messageId);
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such message exists"));
+                timeLogger.Start();
+                var expirationDate = RepositoryBuilder.MessagesRepository.GetMessageExpirationDate(messageId);
+                NLogger.Logger.Info("Successfully fetched message expiration date for message {0}", messageId);
+                return expirationDate;
             }
         }
         /// <summary>
@@ -144,16 +148,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
         public IEnumerable<Message> GetChatMessages(int chatId)
         {
-            try
+            NLogger.Logger.Debug("Called with argument CID:{0}", chatId);
+            using (var timeLogger = new ChronoLogger("Fetching chat messages for chat {0}", chatId))
             {
+                timeLogger.Start();
                 var messages = RepositoryBuilder.MessagesRepository.GetChatMessages(chatId) as Message[] ??
                                RepositoryBuilder.MessagesRepository.GetChatMessages(chatId);
-                return messages;
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat exists"));
+                var chatMessages = messages as Message[] ?? messages.ToArray();
+                NLogger.Logger.Info("Successfully fetched messages for chat {0}. Found {1} messages",
+                    chatId, chatMessages.Length);
+                return chatMessages;
             }
         }
         /// <summary>
@@ -167,17 +171,19 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
         public IEnumerable<Message> GetChatMessagesInRange(int chatId, [FromUri] DateRange dateRange)
         {
-            try
+            NLogger.Logger.Debug("Called with arguments CID:{0}, Range:{1}", chatId, dateRange);
+
+            using (var timeLogger = new ChronoLogger("Fetching chat messages for chat {0} in range: {1}",
+                chatId, dateRange))
             {
+                timeLogger.Start();
                 var messages =
                     RepositoryBuilder.MessagesRepository.GetChatMessagesInRange(chatId, dateRange.DateFrom,
                         dateRange.DateTo);
-                return messages;
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat exists"));
+                var chatMessagesInRange = messages as Message[] ?? messages.ToArray();
+                NLogger.Logger.Info("Successfully fetched messages of chat {0} in range {1}. Found {2} messages",
+                    chatId, dateRange, chatMessagesInRange.Length);
+                return chatMessagesInRange;
             }
         }
         /// <summary>
@@ -192,21 +198,16 @@ namespace DotNetMessenger.WebApi.Controllers
         [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
         public IEnumerable<Message> SearchMessagesInChat(int chatId, [FromUri] string searchString)
         {
-            try
+            NLogger.Logger.Debug("Called with arguments CID:{0}, Search:{1}", chatId, searchString);
+            using (var timeLogger = new ChronoLogger("Searching messages in chat {0}. Search query: {1}",
+                chatId, searchString))
             {
+                timeLogger.Start();
                 var messages = RepositoryBuilder.MessagesRepository.SearchString(chatId, searchString) as Message[] ??
                                RepositoryBuilder.MessagesRepository.SearchString(chatId, searchString).ToArray();
+                NLogger.Logger.Info("Searched for \"{0}\" in chat {1}. Found {2} messages",
+                    searchString, chatId, messages.Length);
                 return messages;
-            }
-            catch (ArgumentNullException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.BadRequest,
-                    "Search string cannot be empty"));
-            }
-            catch (ArgumentException)
-            {
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound,
-                    "No such chat exists"));
             }
         }
     }
