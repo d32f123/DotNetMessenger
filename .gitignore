@@ -263,3 +263,6 @@ __pycache__/
 # Sql solution
 *.ssmssln
 *.ssmssqlproj
+
+# Logs
+logs/
