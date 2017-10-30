@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Threading.Tasks;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Logger;
+using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.DataLayer.SqlServer
 {
@@ -51,9 +53,16 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                         command.Parameters.AddWithValue("@userName", userName);
                         command.Parameters.AddWithValue("@password", password);
-
-                        var id = (int) command.ExecuteScalar();
-                        user = new UserSqlProxy {Id = id, Username = userName};
+                        try
+                        {
+                            var id = (int) command.ExecuteScalar();
+                            user = new UserSqlProxy {Id = id, Username = userName};
+                        }
+                        catch (SqlException)
+                        {
+                            NLogger.Logger.Error("Tried to insert invalid username");
+                            throw new ArgumentException();
+                        }
                     }
                     NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (Username:{1}, Password:x)", "[Users]", userName);
 
@@ -236,7 +245,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 connection.Open();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT [LastName], [FirstName], [Phone], [Email], [DateOfBirth], [Avatar]" +
+                    command.CommandText = "SELECT [LastName], [FirstName], [Phone], [Email], [DateOfBirth], [Avatar], [Gender]" +
                                           "FROM [UserInfos] WHERE [UserID] = @userId";
 
                     command.Parameters.AddWithValue("@userId", userId);
@@ -253,7 +262,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             Phone = reader.IsDBNull(reader.GetOrdinal("Phone")) ? null : reader.GetString(reader.GetOrdinal("Phone")),
                             Email = reader.IsDBNull(reader.GetOrdinal("Email")) ? null : reader.GetString(reader.GetOrdinal("Email")),
                             DateOfBirth = reader.IsDBNull(reader.GetOrdinal("DateOfBirth")) ? null : (DateTime?) reader.GetDateTime(reader.GetOrdinal("DateOfBirth")),
-                            Avatar = reader.IsDBNull(reader.GetOrdinal("Avatar")) ? null : reader[reader.GetOrdinal("Avatar")] as byte[]
+                            Avatar = reader.IsDBNull(reader.GetOrdinal("Avatar")) ? null : reader[reader.GetOrdinal("Avatar")] as byte[],
+                            Gender = reader.IsDBNull(reader.GetOrdinal("Gender")) ? null : (Genders?)reader.GetString(reader.GetOrdinal("Gender")).First()
                         };
                     }
                 }
@@ -285,13 +295,13 @@ namespace DotNetMessenger.DataLayer.SqlServer
                         command.CommandText =
                             "UPDATE [UserInfos] SET [LastName] = @lastName, [FirstName] = @firstName, " +
                             "[Phone] = @phone, [Email] = @email, [DateOfBirth] = @dateOfBirth, " +
-                            "[Avatar] = @avatar WHERE [UserID] = @userId";
+                            "[Avatar] = @avatar, [Gender] = @gender WHERE [UserID] = @userId";
                     }
                     else
                     {
                         command.CommandText =
                             "INSERT INTO [UserInfos] ([UserID], [LastName], [FirstName], [Phone], [Email], [DateOfBirth], " +
-                            "[Avatar]) VALUES (@userId, @lastName, @firstName, @phone, @email, @dateOfBirth, @avatar)";
+                            "[Avatar], [Gender]) VALUES (@userId, @lastName, @firstName, @phone, @email, @dateOfBirth, @avatar, @gender)";
                     }
 
                     command.Parameters.AddWithValue("@userId", userId);
@@ -352,6 +362,16 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             new SqlParameter("@avatar", SqlDbType.VarBinary, userInfo.Avatar.Length)
                                 {Value = userInfo.Avatar};
                         command.Parameters.Add(avatar);
+                    }
+
+                    if (userInfo.Gender == null)
+                    {
+                        command.Parameters.AddWithValue("@gender", DBNull.Value);
+                    }
+                    else
+                    {
+                        command.Parameters.Add(
+                            new SqlParameter("@gender", SqlDbType.Char, 1) {Value = (char) userInfo.Gender});
                     }
 
                     try

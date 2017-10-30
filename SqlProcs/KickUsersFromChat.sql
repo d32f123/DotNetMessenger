@@ -1,3 +1,6 @@
+ DROP PROCEDURE [KickUsersFromChat];
+ GO
+ 
  CREATE OR ALTER PROCEDURE [KickUsersFromChat] 
 	@IDList IdListType READONLY, 
 	@ChatID INT  

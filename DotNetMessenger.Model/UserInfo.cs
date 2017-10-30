@@ -1,4 +1,5 @@
 ﻿using System;
+using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.Model
 {
@@ -9,6 +10,7 @@ namespace DotNetMessenger.Model
         public string Phone { get; set; }
         public string Email { get; set; }
         public DateTime? DateOfBirth { get; set; }
+        public Genders? Gender { get; set; }
         public byte[] Avatar { get; set; }
 
         public UserInfo()

@@ -338,7 +338,7 @@ namespace DotNetMessenger.WebApi.Controllers
                     userId, chatId))
             {
                 timeLog.Start();
-                RepositoryBuilder.ChatsRepository.DeleteChatSpecificInfo(userId, chatId);
+                RepositoryBuilder.ChatsRepository.ClearChatSpecificInfo(userId, chatId);
                 NLogger.Logger.Info("Successfully deleted chat-specific user info for user {0} in chat {1}",
                     userId, chatId);
             }

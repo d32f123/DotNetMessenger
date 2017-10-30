@@ -11,8 +11,12 @@
  DROP TABLE IF EXISTS [UserInfos];
  DROP TABLE IF EXISTS [Tokens];
  DROP TABLE IF EXISTS [Users];
+ DROP TYPE IF EXISTS [GenderType];
  IF EXISTS (SELECT * FROM [sys].[fulltext_catalogs] WHERE name='CG_Messages') 
 	DROP FULLTEXT CATALOG [CG_Messages];
+
+ CREATE TYPE [GenderType] FROM CHAR(1) NULL;
+ GO
 
 	-- USERS table
  CREATE TABLE [Users](
@@ -23,7 +27,8 @@
 		CONSTRAINT	[DF_LastSeenDate] DEFAULT GETDATE(),
 	[RegisterDate]	DATETIME
 		CONSTRAINT	[DF_RegisterDate] DEFAULT GETDATE(),
-	CONSTRAINT		[PK_Users] PRIMARY KEY([ID]),	
+	CONSTRAINT		[PK_Users] PRIMARY KEY([ID]),
+	CONSTRAINT		[CK_Users_Username] CHECK(LEN([Username]) >= 6)
 	);
 	-- INSERT DELETED USER
 INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a deleted user
@@ -35,9 +40,12 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
 	[Phone]			VARCHAR(15),
 	[Email]			VARCHAR(40), -- index candidate
 	[DateOfBirth]	DATE,
+	[Gender]		[GenderType],
 	[Avatar]		VARBINARY(MAX),
 	CONSTRAINT		[PK_UserInfos] PRIMARY KEY([UserID]),
-	CONSTRAINT		[FK_UserInfosToUsers] FOREIGN KEY ([UserID]) REFERENCES [Users]([ID]) ON DELETE CASCADE
+	CONSTRAINT		[FK_UserInfosToUsers] FOREIGN KEY ([UserID]) REFERENCES [Users]([ID]) ON DELETE CASCADE,
+	CONSTRAINT		[CK_UserInfos_Gender] CHECK ([Gender] IN ('F', 'M', 'U')),
+	CONSTRAINT		[CK_UserInfos_Email] CHECK ([Email] LIKE '%@%.%')
 	);
  CREATE INDEX [IX_UserInfos_LastNameFirstNameEmail] ON [UserInfos]([LastName], [FirstName], [Email]);
 
@@ -69,7 +77,7 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
 	[Title]			VARCHAR(30),
 	[Avatar]		VARBINARY(MAX),
 	CONSTRAINT		[PK_ChatInfos] PRIMARY KEY ([ChatID]),
-	CONSTRAINT		[FK_ChatInfosChats] FOREIGN KEY ([ChatID]) REFERENCES [Chats]([ID]) ON DELETE CASCADE
+	CONSTRAINT		[FK_ChatInfosChats] FOREIGN KEY ([ChatID]) REFERENCES [Chats]([ID]) ON DELETE CASCADE,
  );
 
 	-- ChatUsers table
@@ -85,17 +93,12 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
  CREATE TABLE [UserRoles](
 	[ID]			INT IDENTITY(0, 1),
 	[Name]			VARCHAR(20),
-	[ReadPerm]		BIT NOT NULL
-		CONSTRAINT	[DF_ReadPerm] DEFAULT 1,
-	[WritePerm]		BIT NOT NULL
-		CONSTRAINT	[DF_WritePerm] DEFAULT 1,
-	[ChatInfoPerm]	BIT NOT NULL
-		CONSTRAINT	[DF_ChatInfoPerm] DEFAULT 0,
-	[AttachPerm]	BIT NOT NULL
-		CONSTRAINT	[DF_AttachPerm]	DEFAULT 0,
+	[ReadPerm]		BIT NOT NULL,
+	[WritePerm]		BIT NOT NULL,
+	[ChatInfoPerm]	BIT NOT NULL,
+	[AttachPerm]	BIT NOT NULL,
 	[ManageUsersPerm]
-					BIT NOT NULL
-		CONSTRAINT	[DF_ManageUsersPerm] DEFAULT 0,
+					BIT NOT NULL,
 	CONSTRAINT		[PK_UserRoles] PRIMARY KEY ([ID]),
 	CONSTRAINT		[UQ_UserRolesPermissions] UNIQUE ([ReadPerm], [WritePerm],
 							[ChatInfoPerm], [AttachPerm], [ManageUsersPerm])
@@ -116,7 +119,8 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
 	CONSTRAINT		[FK_ChatUserInfosChatUsers] FOREIGN KEY ([UserID], [ChatID]) 
 		REFERENCES	[ChatUsers]([UserID], [ChatID]) ON DELETE CASCADE,
 	CONSTRAINT		[FK_ChatUserInfosUserRoles] FOREIGN KEY ([UserRole])
-		REFERENCES	[UserRoles]([ID])
+		REFERENCES	[UserRoles]([ID]),
+	CONSTRAINT		[CK_ChatUserInfos_Nickname] CHECK([Nickname] IS NULL OR LEN([Nickname]) >= 1)
  );
 
 	-- Messages table
@@ -176,51 +180,7 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
  );
  CREATE INDEX [IX_Attachments_MessageID] ON [Attachments]([MessageID]);
 
- --SELECT * FROM [Users];
- --SELECT * FROM [UserRoles];
- --SELECT * FROM [Chats];
- --SELECT * FROM [ChatUserInfos];
- --SELECT [Nickname], [UserRole] FROM [ChatUserInfos] WHERE [UserID] = 0 AND [ChatID] = 0;
-
- GO
-
-	-- checks whether the specified user is in the specified chat
-CREATE OR ALTER FUNCTION Check_For_ChatUser_Combination (
-    @ChatID INT,
-	@UserID INT
-) RETURNS BIT
-AS
-BEGIN
-    IF EXISTS (SELECT * FROM [ChatUsers] WHERE [UserID] = @UserID AND [ChatID] = @ChatID)
-        RETURN 1
-    RETURN 0
-END
-GO
-	-- trigger that launches on every message insert and checks
-	-- whether the user is in chat or not
-CREATE OR ALTER TRIGGER [TR_Messages_Insert]
-	ON [Messages]
-FOR INSERT
-AS
-DECLARE @chatId INT,
-   @senderId INT
-SELECT @chatId = i.[ChatID],
-	@senderId = i.[SenderID]
-FROM INSERTED i
-IF ([dbo].Check_For_ChatUser_Combination(@chatId, @senderId) = 0)
-BEGIN
-	RAISERROR ('INSERT Messages Constraint FAILED', 16, 1)
-	ROLLBACK TRANSACTION
-END
-GO
-
-	-- a stored procedure that deletes expired messages
- CREATE OR ALTER PROCEDURE [DeleteExpiredMessages] AS
-	DELETE m FROM [Messages] AS m, [MessagesDeleteQueue] AS mdq 
-	WHERE [m].[ID] = [mdq].[MessageID] AND [mdq].[ExpireDate] <= GETDATE();
-GO
-
-	-- a table that keeps various access tokens
+ 	-- a table that keeps various access tokens
  CREATE TABLE [Tokens] (
 	[Token]			VARCHAR(36),
 	[UserID]		INT NOT NULL,
@@ -235,27 +195,153 @@ GO
 	-- create a stored procedure to clear bad tokens
  CREATE OR ALTER PROCEDURE [DeleteExpiredTokens] AS
 	DELETE FROM [Tokens] 
-	WHERE DATEADD(HOUR, [Tokens].[ExpireDays], [Tokens].[LastLoginDate]) > GETDATE();
+	WHERE DATEADD(HOUR, [Tokens].[ExpireDays], [Tokens].[LastLoginDate]) <= GETDATE();
 GO
 
---INSERT INTO [Users] ([Username], [Password]) VALUES ('d32f123', 'asd');
+	-- checks whether the specified user is in the specified chat
+CREATE OR ALTER FUNCTION Check_For_ChatUser_Combination (
+    @ChatID INT,
+	@UserID INT
+) RETURNS BIT
+AS
+BEGIN
+    IF EXISTS (SELECT * FROM [ChatUsers] WHERE [UserID] = @UserID AND [ChatID] = @ChatID)
+        RETURN 1
+    RETURN 0
+END
+GO
 
---INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText]) VALUES (0, 0, 'xd'); 
----- INSERT INTO [ChatUserInfos] ([UserID], [ChatID], [UserRole]) VALUES (0, 0, 1);
---INSERT INTO [ChatUsers] ([UserID], [ChatID]) VALUES (0, 0);
---INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, 0);
--- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
---	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
---    VALUES (1, 0, 'hey');
+	-- trigger that checks if user's info is being deleted while user is not
+ CREATE OR ALTER TRIGGER [TR_ChatUserInfos_Delete]
+	ON [ChatUserInfos]
+ FOR DELETE
+ AS
+ DECLARE @chatId INT, @userId INT
+	SELECT @chatId = d.[ChatID], @userId = d.[UserID] FROM DELETED d
+	IF EXISTS (SELECT * FROM [ChatUsers] WHERE [ChatID] = @chatId AND [UserID] = @userId)
+	BEGIN
+		ROLLBACK TRANSACTION;
+		THROW 50000, 'Cannot DELETE ChatUserInfo entry', 1
+	END
+ GO
+	-- trigger that checks if inserting chatspecific info for dialog
+ CREATE OR ALTER TRIGGER [TR_ChatUserInfos_Insert]
+	ON [ChatUserInfos]
+ FOR INSERT
+ AS
+ DECLARE @chatId INT, @chatType INT
+	SELECT @chatId = i.[ChatID] FROM INSERTED i;
+	SELECT @chatType = c.[ChatType] FROM [Chats] c WHERE c.[ID] = @chatId;
+	IF (@chatType = 0)
+	BEGIN
+		ROLLBACK TRANSACTION;
+		THROW 50000, 'Cannot INSERT ChatUserInfo entry for dialog', 1
+	END
+GO
+	-- trigger that checks that there are no more than 2 users for dialog
+ CREATE OR ALTER TRIGGER [TR_ChatUsers_Insert]
+	ON [ChatUsers]
+ FOR INSERT
+ AS
+	DECLARE @chatId INT, @userCount INT, @chatType INT, @userId INT
+	SELECT @chatId = i.[ChatID], @userId = i.[UserID] FROM INSERTED i;
+	SELECT @userCount = COUNT(*) FROM [ChatUsers] WHERE [ChatID] = @chatId;
+	SELECT @chatType = [ChatType] FROM [Chats] WHERE [ID] = @chatId;
+	IF (@userCount > 2 AND @chatType = 0)
+	BEGIN
+		RAISERROR('Cannot INSERT more than 2 users for dialog', 16, 1)
+		ROLLBACK TRANSACTION
+	END
+	-- insert a chatuserinfo entry
+	IF (@chatType <> 0)
+		INSERT [ChatUserInfos] ([ChatID], [UserID]) VALUES (@chatId, @userId);
+ GO
+	-- trigger that checks that you cannot add or remove deleted user (id 0) to the chat
+ CREATE OR ALTER TRIGGER [TR_ChatUsers_InsertDelete_DefaultUser]
+	ON [ChatUsers]
+ FOR INSERT, DELETE
+ AS
+	DECLARE @userId INT
+	SELECT @userId = i.[UserID] FROM INSERTED i;
+	IF (@userId = 0)
+	BEGIN
+		RAISERROR('Cannot INSERT or DELETE default user from chat', 16, 1)
+		ROLLBACK TRANSACTION
+	END
+ GO
 
--- INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText])
---	OUTPUT INSERTED.[ID], INSERTED.[MessageDate]
---    VALUES (1, 0, 'hey world asd');
+	-- trigger that makes sure we cannot kick creator of the chat
+ CREATE OR ALTER TRIGGER [TR_ChatUsers_Delete_Creator]
+	ON [ChatUsers]
+ FOR DELETE
+ AS
+	DECLARE @userId INT, @chatId INT
+	SELECT @userId = i.[UserID], @chatId = i.[ChatID] FROM INSERTED i;
+	IF (@userId = (SELECT c.[CreatorID] FROM [Chats] c WHERE c.[ID] = @chatId))
+	BEGIN
+		RAISERROR('Cannot DELETE creator from chat', 16, 1);
+		ROLLBACK TRANSACTION;
+	END
+ GO
+	-- trigger that checks that we cannot delete users from dialog
+ CREATE OR ALTER TRIGGER [TR_ChatUsers_Delete]
+	ON [ChatUsers]
+ FOR DELETE
+ AS
+	DECLARE @chatId INT, @chatType INT
+	SELECT @chatId = i.[ChatID] FROM INSERTED i;
+	SELECT @chatType = [ChatType] FROM [Chats] WHERE [ID] = @chatId;
+	IF (@chatType = 0)
+	BEGIN
+		RAISERROR('Cannot DELETE from dialog', 16, 1)
+		ROLLBACK TRANSACTION
+	END
+ GO
+	-- trigger that checks that new creator is in chat
+ CREATE OR ALTER TRIGGER [TR_Chats_Insert]
+	ON [Chats]
+ AFTER INSERT
+ AS
+ DECLARE @chatId INT, @userId INT
+	SELECT @chatId = i.[ID],
+		@userId = i.[CreatorID]
+	FROM INSERTED i;
+	INSERT INTO [ChatUsers] ([ChatID], [UserID]) VALUES (@chatId, @userId);
+ GO
+	-- trigger that checks that chat info is not being set on dialog
+ CREATE OR ALTER TRIGGER [TR_ChatInfos_Insert]
+	ON [ChatInfos]
+ FOR INSERT, UPDATE, DELETE
+ AS
+ DECLARE @chatId INT, @chatType INT
+	SELECT @chatId = i.[ChatID] FROM INSERTED i;
+	SELECT @chatType = [Chats].[ChatType] FROM [Chats] WHERE [Chats].[ID] = @chatId;
+	IF (@chatType = 0)
+	BEGIN
+		RAISERROR ('Cannot INSERT, UPDATE or DELETE Dialog info', 16, 1)
+		ROLLBACK TRANSACTION
+	END
+ GO
 
---SELECT * FROM [Messages] WHERE CONTAINS([MessageText], '*hey*');
-
---SELECT * FROM [MessagesDeleteQueue];
-
---INSERT INTO [MessagesDeleteQueue] ([MessageID], [ExpireDate]) VALUES (1, GETDATE());
-
---EXEC [DeleteExpiredMessages];
+	-- trigger that launches on every message insert and checks
+	-- whether the user is in chat or not
+CREATE OR ALTER TRIGGER [TR_Messages_Insert]
+	ON [Messages]
+FOR INSERT
+AS
+DECLARE @chatId INT,
+   @senderId INT
+SELECT @chatId = i.[ChatID],
+	@senderId = i.[SenderID]
+FROM INSERTED i
+IF ([dbo].Check_For_ChatUser_Combination(@chatId, @senderId) = 0)
+BEGIN
+	ROLLBACK TRANSACTION;
+	THROW 50000, 'INSERT Messages Constraint FAILED', 1
+END
+IF (@senderId = 0)
+BEGIN
+	ROLLBACK TRANSACTION;
+	THROW 50000, 'INSERT Message sender cannot be 0', 1
+END
+GO

@@ -148,9 +148,9 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             };
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
-            var chat = _chatsRepository.CreateGroupChat(users.GetRange(0, 2).Select(x => x.Id), "newChat");
-
             users.ForEach(x => _tempUsers.Add(x.Id));
+
+            var chat = _chatsRepository.CreateGroupChat(users.GetRange(0, 2).Select(x => x.Id), "newChat");
             _tempChats.Add(chat.Id);
             
                 // add user
@@ -596,14 +596,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 new UserCredentials { Username = "testuser48", Password = "asd" },
             };
 
-            var otherUserCred = new UserCredentials() {Username = "John", Password = "asdh"};
+            var otherUserCred = new UserCredentials() {Username = "John123", Password = "asdh"};
             // act
             var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
             var otherUser = _usersRepository.CreateUser(otherUserCred.Username, otherUserCred.Password);
-
+            users.ForEach(x => _tempUsers.Add(x.Id));
             var chat = _chatsRepository.CreateGroupChat(users.Select(x => x.Id), "hey");
 
-            users.ForEach(x => _tempUsers.Add(x.Id));
+            
             _tempUsers.Add(otherUser.Id);
             // assert
             Assert.ThrowsException<ArgumentException>(() => _chatsRepository.SetCreator(chat.Id, otherUser.Id));
@@ -997,7 +997,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             _chatsRepository.SetChatSpecificRole(regularUser.Id, chat.Id, UserRoles.Regular);
-            _chatsRepository.DeleteChatSpecificInfo(regularUser.Id, chat.Id);
+            _chatsRepository.ClearChatSpecificInfo(regularUser.Id, chat.Id);
             _chatsRepository.SetChatSpecificRole(regularUser.Id, chat.Id, UserRoles.Moderator);
             var moderatorRole = _chatsRepository.GetChatSpecificInfo(regularUser.Id, chat.Id).Role;
 
@@ -1018,7 +1018,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
             // assert
-            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.DeleteChatSpecificInfo(0, chat.Id));
+            Assert.ThrowsException<ArgumentException>(() => _chatsRepository.ClearChatSpecificInfo(0, chat.Id));
 
         }
 
@@ -1113,7 +1113,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
 
-            _chatsRepository.DeleteChatSpecificInfo(user.Id, chat.Id);
+            _chatsRepository.ClearChatSpecificInfo(user.Id, chat.Id);
             _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, userInfo, true);
             var returnedInfo = _chatsRepository.GetChatSpecificInfo(user.Id, chat.Id);
 
@@ -1134,7 +1134,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
 
-            _chatsRepository.DeleteChatSpecificInfo(user.Id, chat.Id);
+            _chatsRepository.ClearChatSpecificInfo(user.Id, chat.Id);
             // assert
             Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, null));
         }
@@ -1152,7 +1152,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempUsers.Add(user.Id);
             _tempChats.Add(chat.Id);
 
-            _chatsRepository.DeleteChatSpecificInfo(user.Id, chat.Id);
+            _chatsRepository.ClearChatSpecificInfo(user.Id, chat.Id);
             // assert
             Assert.ThrowsException<ArgumentNullException>(() => _chatsRepository.SetChatSpecificInfo(user.Id, chat.Id, chatUserInfo, true));
         }

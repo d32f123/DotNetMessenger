@@ -135,6 +135,6 @@ namespace DotNetMessenger.DataLayer
         /// </summary>
         /// <param name="userId">The id of the user</param>
         /// <param name="chatId">The id of the chat</param>
-        void DeleteChatSpecificInfo(int userId, int chatId);
+        void ClearChatSpecificInfo(int userId, int chatId);
     }
 }

@@ -146,7 +146,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
                 FirstName = "Vladmir",
                 DateOfBirth = DateTime.Parse("06/05/1996"),
                 Email = "xxx@yandex.ru",
-                Avatar = Encoding.UTF8.GetBytes("testAvatar")
+                Avatar = Encoding.UTF8.GetBytes("testAvatar"),
+                Gender = Genders.Female
             };
             var user = new UserCredentials{Username = "testuser4", Password = "x"};
 
@@ -164,6 +165,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.IsTrue(userInfo.Avatar.SequenceEqual(returnedUser.UserInfo.Avatar));
             Assert.AreEqual(userInfo.DateOfBirth?.Date, returnedUser.UserInfo.DateOfBirth);
             Assert.AreEqual(userInfo.Phone, returnedUser.UserInfo.Phone);
+            Assert.AreEqual(userInfo.Gender, returnedUser.UserInfo.Gender);
         }
 
         [TestMethod]
@@ -203,7 +205,6 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             {
                 Avatar = Encoding.UTF8.GetBytes(""),
                 DateOfBirth = DateTime.Now,
-                Email = "",
                 FirstName = "",
                 LastName = "",
                 Phone = ""
@@ -220,7 +221,6 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             Assert.AreEqual(user.Username, returnedUser.Username);
             Assert.AreEqual(userInfo.LastName, returnedUser.UserInfo.LastName);
             Assert.AreEqual(userInfo.FirstName, returnedUser.UserInfo.FirstName);
-            Assert.AreEqual(userInfo.Email, returnedUser.UserInfo.Email);
             Assert.IsTrue(userInfo.Avatar.SequenceEqual(returnedUser.UserInfo.Avatar));
             Assert.AreEqual(userInfo.DateOfBirth?.Date, returnedUser.UserInfo.DateOfBirth);
             Assert.AreEqual(userInfo.Phone, returnedUser.UserInfo.Phone);

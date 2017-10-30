@@ -67,18 +67,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     }
                 }
                 NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUsers]", userId, chatId);
-                // make an entry in chatuserinfos table
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText =
-                        "INSERT INTO [ChatUserInfos] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
-
-                    command.Parameters.AddWithValue("@userId", userId);
-                    command.Parameters.AddWithValue("@chatId", chatId);
-
-                    command.ExecuteNonQuery();
-                }
-                NLogger.Logger.Trace("DB:Inserted into {0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUserInfos]", userId, chatId);
             }
             
         }
@@ -194,12 +182,11 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     connection.Open();
 
                     var chatInfo = new ChatInfo {Title = title};
-                    var userIds = members as int[] ?? membersList.ToArray();
 
                     var chat = new ChatSqlProxy
                     {
                         ChatType = chatType,
-                        CreatorId = userIds[0],
+                        CreatorId = membersList[0],
                         Info = chatInfo
                     };
 
@@ -207,7 +194,10 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var command = connection.CreateCommand())
                     {
                         command.CommandText =
-                            "INSERT INTO [Chats] ([ChatType], [CreatorID]) OUTPUT INSERTED.[ID] VALUES (@chatType, @creatorId)";
+                            @"DECLARE @T TABLE (ID INT)
+                                INSERT INTO [Chats] ([ChatType], [CreatorID]) 
+                                OUTPUT INSERTED.[ID] INTO @T VALUES (@chatType, @creatorId)
+                               SELECT [ID] FROM @T";
 
                         command.Parameters.AddWithValue("@chatType", (int) (chat.ChatType));
                         command.Parameters.AddWithValue("@creatorId", chat.CreatorId);
@@ -226,7 +216,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (ChatType:{1}, CreatorID:{2})", "[Chats]", chat.ChatType, chat.CreatorId);
 
                     // Add users to chat
-                    foreach (var userId in userIds)
+                    foreach (var userId in membersList.Skip(1))
                     {
                         using (var command = connection.CreateCommand())
                         {
@@ -246,34 +236,25 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             }
                         }
                         NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUsers]", userId, chat.Id);
+                    }
+
+                    if (chatType != ChatTypes.Dialog)
+                    {
+                        // Add chat title
                         using (var command = connection.CreateCommand())
                         {
                             command.CommandText =
-                                "INSERT INTO [ChatUserInfos] ([UserID], [ChatID]) VALUES (@userId, @chatId)";
+                                "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, NULL)";
 
-                            command.Parameters.AddWithValue("@userId", userId);
                             command.Parameters.AddWithValue("@chatId", chat.Id);
+                            command.Parameters.AddWithValue("@title", chatInfo.Title);
 
                             command.ExecuteNonQuery();
                         }
-                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (UserID:{1}, ChatID:{2})", "[ChatUserInfos]", userId, chat.Id);
+                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (ChatID:{1}, Title:{2})", "[ChatInfos]", chat.Id,
+                            chatInfo.Title);
+                        SetChatSpecificRole(membersList[0], chat.Id, UserRoles.Moderator);
                     }
-
-                    // Add chat title
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText =
-                            "INSERT INTO [ChatInfos] ([ChatID], [Title], [Avatar]) VALUES (@chatId, @title, NULL)";
-
-                        command.Parameters.AddWithValue("@chatId", chat.Id);
-                        command.Parameters.AddWithValue("@title", chatInfo.Title);
-
-                        command.ExecuteNonQuery();
-                    }
-
-                    NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (ChatID:{1}, Title:{2})", "[ChatInfos]", chat.Id, chatInfo.Title);
-                    if (chatType != ChatTypes.Dialog)
-                        SetChatSpecificRole(userIds[0], chat.Id, UserRoles.Moderator);
 
                     scope.Complete();
                     return chat;
@@ -905,7 +886,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         /// <exception cref="T:System.ArgumentNullException">Throws if no data found about the user</exception>
         /// <exception cref="T:System.ArgumentException">Throws if any of the ids are invalid or if the user is not in chat</exception>
         /// <exception cref="ChatTypeMismatchException">Throws if chat is dialog</exception>
-        public void DeleteChatSpecificInfo(int userId, int chatId)
+        public void ClearChatSpecificInfo(int userId, int chatId)
         {
             if (userId == 0)
                 throw new ArgumentException();
@@ -921,13 +902,14 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     throw new ArgumentException();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "DELETE FROM [ChatUserInfos] WHERE [UserID] = @userId AND [ChatID] = @chatId";
+                    command.CommandText = "UPDATE [ChatUserInfos] SET [Nickname] = NULL, [UserRole] = DEFAULT" +
+                                          " WHERE [UserID] = @userId AND [ChatID] = @chatId";
                     command.Parameters.AddWithValue("@userId", userId);
                     command.Parameters.AddWithValue("@chatId", chatId);
 
                     if (command.ExecuteNonQuery() == 0)
                         throw new ArgumentNullException();
-                    NLogger.Logger.Trace("DB:Deleted:{0}:WHERE UserID:{1} AND ChatID:{2}", "[ChatUserInfos]", userId, chatId);
+                    NLogger.Logger.Trace("DB:Updated:{0}:WHERE UserID:{1} AND ChatID:{2}", "[ChatUserInfos]", userId, chatId);
 
                 }
             }
