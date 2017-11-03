@@ -28,6 +28,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WebApi", "D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.Logger", "DotNetMessenger.Logger\DotNetMessenger.Logger.csproj", "{834AC2CB-B64D-418F-AF9B-5486AE936F45}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WPFClient", "DotNetMessenger.WPFClient\DotNetMessenger.WPFClient.csproj", "{66D8FC28-06C2-45A3-A519-777804AB7B4C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,10 @@ Global
 		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Release|Any CPU.Build.0 = Release|Any CPU
+		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
