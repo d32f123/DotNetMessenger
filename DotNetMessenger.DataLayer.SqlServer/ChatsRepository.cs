@@ -155,6 +155,36 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
+        /// <inheritdoc />
+        /// <summary>
+        /// Gets a dialog between two users
+        /// </summary>
+        /// <param name="member1">User 1</param>
+        /// <param name="member2">User 2</param>
+        /// <returns>Dialog between the two users</returns>
+        public Chat CreateOrGetDialog(int member1, int member2)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "EXECUTE CreateOrGet_Dialog @user1, @user2";
+
+                    command.Parameters.AddWithValue("@user1", member1);
+                    command.Parameters.AddWithValue("@user2", member2);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.NextResult()) ;
+                        reader.Read();
+                        var id = reader.GetInt32(reader.GetOrdinal("ID"));
+                        return GetChat(id);
+                    }
+                }
+            }
+        }
         /// <summary>
         /// Creates a chat of type <paramref name="chatType"/> with given <paramref name="title"/> and <paramref name="members"/>
         /// </summary>

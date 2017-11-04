@@ -30,16 +30,7 @@ namespace DotNetMessenger.WPFClient.Windows
                 typeof(LoginWindow)
             );
 
-        public string PasswordString
-        {
-            get => (string)GetValue(PasswordStringProperty);
-            set => SetValue(PasswordStringProperty, value);
-        }
-        public static readonly DependencyProperty PasswordStringProperty =
-            DependencyProperty.Register(
-                nameof(PasswordString), typeof(string),
-                typeof(LoginWindow)
-            );
+        public string PasswordString => PasswordBox.Password;
 
         public bool RememberLogin
         {

@@ -24,7 +24,7 @@
         <TabControl Grid.Column="0" Grid.Row="1" Grid.RowSpan="3">
             <TabItem Header="Пользователи">
                 <ListView x:Name="UsersListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single" 
-                          SelectionChanged="UserPicker_SelectionChanged"/>
+                          SelectionChanged="UserPicker_SelectionChanged" />
             </TabItem>
             <TabItem Header="Группы">
                 <ListView x:Name="ChatsListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single"
@@ -35,12 +35,12 @@
                           SelectionChanged="HistoryPicker_SelectionChanged"/>
             </TabItem>
         </TabControl>
-        <DockPanel x:Name="ChatDockPanel" Grid.Row="0" Grid.Column="2">
+        <DockPanel x:Name="ChatDockPanel" Grid.Row="0" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
             <controls:MetaBox x:Name="CurrentChatBox" DockPanel.Dock="Left" Width="Auto" />
         </DockPanel>
         <GridSplitter Grid.RowSpan="4"  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" />
-        <ListView x:Name="MessagesListView" Grid.Row="1" Grid.Column="2"/>
-        <GridSplitter Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch"></GridSplitter>
-        <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="3" Grid.Column="2"/>
+        <ListView x:Name="MessagesListView" Grid.Row="1" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        <GridSplitter Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="3" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
     </Grid>
 </Window>

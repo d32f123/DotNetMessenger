@@ -71,6 +71,8 @@ namespace DotNetMessenger.WebApi.Controllers
             if (!(Thread.CurrentPrincipal is UserPrincipal))
             {
                 NLogger.Logger.Warn("Could not get user principal");
+                user.ChatUserInfos = null;
+                user.Chats = null;
                 return user;
             }
             var principal = (UserPrincipal)Thread.CurrentPrincipal;
@@ -83,8 +85,31 @@ namespace DotNetMessenger.WebApi.Controllers
 
             user.ChatUserInfos = null;
             user.Chats = null;
-            NLogger.Logger.Info("Fetched user with username {0}. THe user is not the caller", username);
+            NLogger.Logger.Info("Fetched user with username {0}. The user is not the caller", username);
             return user;
+        }
+        /// <summary>
+        /// Gets a list of all the users in DB
+        /// </summary>
+        /// <returns>List of all the users</returns>
+        [Route("")]
+        [HttpGet]
+        public IEnumerable<User> GetAllUsers()
+        {
+            NLogger.Logger.Debug("Called");
+            using (var timeLogger = new ChronoLogger("{0}: Fetching all users", nameof(GetAllUsers)))
+            {
+                timeLogger.Start();
+                var users = RepositoryBuilder.UsersRepository.GetAllUsers();
+                var usersList = users as List<User> ?? users.ToList();
+                usersList.ForEach(x =>
+                {
+                    x.ChatUserInfos = null;
+                    x.Chats = null;
+                });
+                NLogger.Logger.Info("All users successfully fetched. Total fetched: {0}", usersList.Count);
+                return usersList;
+            }
         }
         /// <summary>
         /// Gets list of chats the user has. User performing the request must be the same as <paramref name="id"/>

@@ -59,6 +59,57 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
+        public void Should_CreateDialogChat_When_CreateOrGet()
+        {
+            // arrange
+            var usersCred = new List<UserCredentials>
+            {
+                new UserCredentials { Username = "testuser156", Password = "asd" },
+                new UserCredentials { Username = "test1236", Password = "asd" }
+            };
+            // act
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            var chat = _chatsRepository.CreateOrGetDialog(users[0].Id, users[1].Id);
+
+            users.ForEach(x => _tempUsers.Add(x.Id));
+            _tempChats.Add(chat.Id);
+
+            // assert
+            var i = 0;
+            foreach (var user in chat.Users)
+            {
+                Assert.IsTrue(user == users[i++].Id);
+            }
+        }
+
+        [TestMethod]
+        public void Should_GetExistingDialogChat_When_CreateOrGet()
+        {
+            // arrange
+            var usersCred = new List<UserCredentials>
+            {
+                new UserCredentials { Username = "testus123", Password = "asd" },
+                new UserCredentials { Username = "testus9559", Password = "asd" }
+            };
+            // act
+            var users = usersCred.Select(x => _usersRepository.CreateUser(x.Username, x.Password)).ToList();
+            var chat = _chatsRepository.CreateOrGetDialog(users[0].Id, users[1].Id);
+
+            users.ForEach(x => _tempUsers.Add(x.Id));
+            _tempChats.Add(chat.Id);
+
+            var chat2 = _chatsRepository.CreateOrGetDialog(users[0].Id, users[1].Id);
+
+            // assert
+            Assert.AreEqual(chat, chat2);
+            var i = 0;
+            foreach (var user in chat.Users)
+            {
+                Assert.IsTrue(user == users[i++].Id);
+            }
+        }
+
+        [TestMethod]
         public void Should_ThrowArgumentException_When_InvalidUsers()
         {
             // arrange

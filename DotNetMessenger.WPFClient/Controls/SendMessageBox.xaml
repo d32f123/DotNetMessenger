@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:DotNetMessenger.WPFClient.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" MaxHeight="80" DataContext="{Binding RelativeSource={RelativeSource Self}}">
-    <Grid VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
+    <Grid Visibility="{Binding Path=Visibility}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
         <TextBox x:Name="MainTextBox" Grid.Row="0" VerticalScrollBarVisibility="Auto" MaxLines="5" MinLines="1" MaxLength="500"
                     Grid.RowSpan="2" Grid.Column="0" TextWrapping="Wrap"
-                    Text="{Binding Path=MessageText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Visibility="Visible"/>
+                    Text="{Binding Path=MessageText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Visibility="Hidden"/>
         <StackPanel Grid.Row="0" Grid.Column="1">
             <Button Name="SendButton" Content="Send" Margin="2px,0,2px,0" Visibility="Collapsed"/>
             <Button Name="AttachButton" Content="Attach" Margin="2px,0,2px,0" Visibility="Collapsed"/>

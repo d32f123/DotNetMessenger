@@ -29,11 +29,15 @@ namespace DotNetMessenger.WPFClient.Windows
         private void LoginButton_Click(object sender, RoutedEventArgs e)
         {
             UserRegistered = true;
+            DialogResult = true;
+            this.Close();
         }
 
         private void RegisterButton_Click(object sender, RoutedEventArgs e)
         {
             UserRegistered = false;
+            DialogResult = true;
+            this.Close();
         }
     }
 }

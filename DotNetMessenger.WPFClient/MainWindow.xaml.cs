@@ -25,25 +25,35 @@ namespace DotNetMessenger.WPFClient
     public partial class MainWindow : Window
     {
         #region Business logic
-        private User CurrentUser;
+        private User CurrentUser { get; set; }
+        private Guid Token { get; set; }
 
-        private (Guid, User) LoginUser()
+        private void LoginUser()
         {
-            bool done = false;
-            while (!done)
+            while (true)
             {
                 var welcomeWindow = new WelcomeWindow();
                 welcomeWindow.ShowDialog();
                 if (welcomeWindow.DialogResult == null || welcomeWindow.DialogResult == false)
-                    return null;
+                {
+                    CurrentUser = null;
+                    Token = Guid.Empty;
+                }
                 if (!welcomeWindow.UserRegistered)
                 {
                     var registerWindow = new RegisterWindow();
                     registerWindow.ShowDialog();
                     if (registerWindow.DialogResult == null || registerWindow.DialogResult == false)
                         continue;
-
                 }
+                var loginWindow = new LoginWindow();
+                loginWindow.ShowDialog();
+                if (loginWindow.DialogResult == null || loginWindow.DialogResult == false)
+                    continue;
+                Token = loginWindow.Token;
+                var userId = RestClient.GetUserIdByTokenAsync(Token).Result;
+                CurrentUser = RestClient.GetUserAsync(userId, Token).Result;
+                break;
             }
         }
         #endregion
@@ -54,40 +64,49 @@ namespace DotNetMessenger.WPFClient
         public readonly ObservableCollection<MetaBox> HistoryMetaBoxs = new ObservableCollection<MetaBox>();
         public readonly ObservableCollection<ChatMessageBox> ChatMessagesBoxs = new ObservableCollection<ChatMessageBox>();
 
+        public Visibility DisplayChatRegion
+        {
+            get => (Visibility)GetValue(DisplayChatRegionProperty);
+            set => SetValue(DisplayChatRegionProperty, value);
+        }
+        public static readonly DependencyProperty DisplayChatRegionProperty =
+            DependencyProperty.Register(
+                nameof(DisplayChatRegion), typeof(Visibility),
+                typeof(MainWindow)
+            );
+
         public MainWindow()
         {
             InitializeComponent();
-            UsersMetaBoxs.Add(new UserMetaBox(new User
-            {
-                Username = "Temыч",
-                UserInfo = new UserInfo { FirstName = "Темыч", LastName = "Темтемыч" }
-            }));
-            UsersMetaBoxs.Add(new UserMetaBox(new User
-            {
-                Username = "Шурьло",
-                UserInfo = new UserInfo { FirstName = "Шуричелло", LastName = "Шурикво" }
-            }));
 
-            ChatsMetaBoxs.Add(new ChatMetaBox(new Chat
-            {
-                Info = new ChatInfo { Title = "hey"}
-            }));
+            /* Login */
+            LoginUser();
 
-            ChatMessagesBoxs.Add(new ChatMessageBox (new Message
-            {
-                Text = "Hey there!"
-            }));
+            /* Set current user */
+            CurrentUserBox.DisplayedUser = CurrentUser;
 
-            /* WELCOME WINDOW */
-            
-            var welcomeWindow = new WelcomeWindow();
-            welcomeWindow.ShowDialog();
+            /* Get all users and display them */
+            var users = RestClient.GetAllUsersAsync(Token).Result;
+            if (users != null && users.Any())
+                foreach (var user in users)
+                {
+                    UsersMetaBoxs.Add(new UserMetaBox(user));
+                }
 
+            /* Get user's groups and display them */
+            var chats = RestClient.GetUserChats(Token, CurrentUser.Id).Result;
+            if (chats != null && chats.Any())
+                foreach (var chat in chats)
+                    ChatsMetaBoxs.Add(new ChatMetaBox(chat));
 
             UsersListView.ItemsSource = UsersMetaBoxs;
             ChatsListView.ItemsSource = ChatsMetaBoxs;
+            /* TODO: HISTORY.
+             * REST REPO SHOULD IMPLEMENT CALL TO GET LATEST CHAT MESSAGE
+             * HISTORYMETABOX SHOULD DISPLAY LATEST MESSAGE AND DATE */
             HistoryListView.ItemsSource = HistoryMetaBoxs;
-            MessagesListView.ItemsSource = ChatMessagesBoxs;
+
+            DisplayChatRegion = Visibility.Hidden;
         }
 
         private void SetCurrentChatBox(MetaBox newBox)
@@ -104,8 +123,14 @@ namespace DotNetMessenger.WPFClient
             ChatsListView.SelectedIndex = -1;
             HistoryListView.SelectedIndex = -1;
 
-            SetCurrentChatBox((MetaBox)e.AddedItems[0]);
-            /* TODO: OPEN DIALOG */
+            var userBox = (UserMetaBox)e.AddedItems[0];
+
+            SetCurrentChatBox(userBox);
+            DisplayChatRegion = Visibility.Visible;
+
+            ChatMessagesBoxs.Clear();
+
+            RestClient.GetChatMessages(Token, userBox)
         }
 
         private void ChatPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)

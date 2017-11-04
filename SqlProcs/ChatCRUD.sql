@@ -20,6 +20,8 @@ DECLARE @chatId INT, @creatorId INT
 		THROW;
 	END CATCH
 	COMMIT TRANSACTION
+	SELECT @chatId ID
+	RETURN
 GO
 
 CREATE OR ALTER PROCEDURE Get_Chat
@@ -36,6 +38,32 @@ AS
 	ON a.[ID] = b.[ChatID]
 	IF (@@ROWCOUNT = 0)
 		THROW 50000, 'id is invalid', 1
+	RETURN
+GO
+
+CREATE OR ALTER PROCEDURE CreateOrGet_Dialog
+	@user1		INT,
+	@user2		INT
+AS
+DECLARE @chatId INT
+	SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
+	WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] 
+		AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
+			OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)
+	IF (@@ROWCOUNT <> 0)
+		RETURN
+	BEGIN TRANSACTION
+	BEGIN TRY
+		INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, @user1);
+		SET @chatId = @@IDENTITY;
+		INSERT INTO [ChatUsers] ([ChatID], [UserID]) VALUES (@chatId, @user2);
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION;
+		THROW;
+	END CATCH
+	COMMIT TRANSACTION
+	SELECT @chatId ID;
 	RETURN
 GO
 
@@ -225,8 +253,9 @@ GO
 --TODO: ChatSpecificInfo, Role
 
 DECLARE @idlist IDListType;
-INSERT @idlist ([ID]) VALUES (1), (2);
+INSERT @idlist ([ID]) VALUES (3), (436);
 EXECUTE Create_Chat @idlist, 'nice', 1;
+EXECUTE CreateOrGet_Dialog 1, 2;
 EXECUTE Get_Chat 1;
 EXECUTE Get_All_Chats;
 EXECUTE Delete_Chat 7;

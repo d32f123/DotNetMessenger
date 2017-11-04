@@ -34,6 +34,13 @@ namespace DotNetMessenger.DataLayer
         /// <returns>Null if invalid members, else chat with a given Id</returns>
         Chat GetChat(int chatId);
         /// <summary>
+        /// Gets a dialog between two users
+        /// </summary>
+        /// <param name="member1">User 1</param>
+        /// <param name="member2">User 2</param>
+        /// <returns>Dialog between the two users</returns>
+        Chat CreateOrGetDialog(int member1, int member2);
+        /// <summary>
         /// Gets a list of users in a chat
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
@@ -51,7 +58,6 @@ namespace DotNetMessenger.DataLayer
         /// </summary>
         /// <param name="chatId"></param>
         void DeleteChat(int chatId);
-
         /// <summary>
         /// Sets a new creator for a given chat
         /// <paramref name="newCreator"/> should be already in chat and != 0

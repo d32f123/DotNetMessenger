@@ -32,7 +32,7 @@ GO
 
 CREATE OR ALTER PROCEDURE Get_All_Users
 AS
-	SELECT * FROM [Users];
+	SELECT * FROM [Users] WHERE [ID] <> 0;
 	RETURN;
 GO
 
@@ -109,7 +109,7 @@ AS
 GO
 
 EXECUTE Get_All_Users;
-EXECUTE Create_User 'shureek', 'x';
+EXECUTE Create_User 'd32f123', 'x';
 EXECUTE Delete_User 2;
 EXECUTE Get_User 2;
 EXECUTE Get_User_By_Username 'd32f1234';

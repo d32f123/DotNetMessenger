@@ -62,6 +62,7 @@ namespace DotNetMessenger.WPFClient.Controls
             {
                 SendButton.Visibility = Visibility.Visible;
                 TimeExpander.Visibility = Visibility.Visible;
+                MainTextBox.Visibility = Visibility.Visible;
             }
             if ((perms & RolePermissions.AttachPerm) != 0)
             {

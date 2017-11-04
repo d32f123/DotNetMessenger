@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using DotNetMessenger.Model;
 
 namespace DotNetMessenger.DataLayer
@@ -69,5 +70,10 @@ namespace DotNetMessenger.DataLayer
         /// </summary>
         /// <param name="userId">The id of the user</param>
         void DeleteUserInfo(int userId);
+        /// <summary>
+        /// Gets information about all users
+        /// </summary>
+        /// <returns>A collection of all the users in DB</returns>
+        IEnumerable<User> GetAllUsers();
     }
 }

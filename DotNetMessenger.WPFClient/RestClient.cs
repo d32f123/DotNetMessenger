@@ -27,11 +27,11 @@ namespace DotNetMessenger.WPFClient
         public static async Task<User> GetUserAsync(int id, Guid token)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, $"users/{id}");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:");
-            var response = await Client.SendAsync(request);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadAsAsync<User>();
+                return await response.Content.ReadAsAsync<User>().ConfigureAwait(false);
             }
             return null;
         }
@@ -44,18 +44,64 @@ namespace DotNetMessenger.WPFClient
             return null;
         }
 
+        public static async Task<List<User>> GetAllUsersAsync(Guid token)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "users");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<List<User>>();
+            }
+            return null;
+        }
+
+        public static async Task<List<Chat>> GetUserChats(Guid token, int id)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"users/{id}/chats");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<List<Chat>>();
+            }
+            return null;
+        }
+
+        #endregion
+
+        #region Chats region
+
+
+        #endregion
+
+        #region Messages region
+
+        public static async Task<List<Message>> GetChatMessages(Guid token, int id)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"messages/chats/{id}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<List<Message>>();
+            }
+            return null;
+        }
+
         #endregion
 
         #region Tokens region
         public static async Task<Guid> GetUserTokenAsync(string login, string password)
         {
             var request = new HttpRequestMessage(HttpMethod.Post, "tokens");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{login}:{password}");
-            var response = await Client.SendAsync(request);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{login}:{password}".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
             try
             {
+                var retString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return response.IsSuccessStatusCode
-                    ? Guid.Parse(await response.Content.ReadAsStringAsync())
+                    ? Guid.Parse(new string(retString.Where(c => c != '"').ToArray()))
                     : Guid.Empty;
             }
             catch
@@ -67,18 +113,19 @@ namespace DotNetMessenger.WPFClient
         public static void InvalidateUserToken(Guid token)
         {
             var request = new HttpRequestMessage(HttpMethod.Delete, "tokens");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:".ToBase64String());
             Client.SendAsync(request);
         }
 
-        public static async Task<int> GetUserIdByTokenAsync(int id, Guid token)
+        public static async Task<int> GetUserIdByTokenAsync(Guid token)
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "tokens");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:");
-            var response = await Client.SendAsync(request);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{token}:".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
             try
             {
-                return response.IsSuccessStatusCode ? int.Parse(await response.Content.ReadAsStringAsync()) : -1;
+                var retString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return response.IsSuccessStatusCode ? int.Parse(retString) : -1;
             }
             catch
             {

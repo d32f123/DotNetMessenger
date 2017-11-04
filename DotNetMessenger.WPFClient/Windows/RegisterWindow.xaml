@@ -11,7 +11,8 @@
                    Text="Ну привет, путник! Представься, и можешь заходить" VerticalAlignment="Top" Width="237"/>
         <DockPanel Margin="10,0,10,2" Height="{Binding ElementName=LoginBox, Path=Height}">
             <Label Content="Логин:" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
-            <TextBox Name="LoginBox" VerticalContentAlignment="Center" HorizontalAlignment="Right" Width="183" Height="23"/>
+            <TextBox Name="LoginBox" Text="{Binding Path=LoginString, Mode=TwoWay}" 
+                     VerticalContentAlignment="Center" HorizontalAlignment="Right" Width="183" Height="23"/>
         </DockPanel>
         <DockPanel Margin="10,0,10,2" VerticalAlignment="Top">
             <Label Content="Пароль:" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>

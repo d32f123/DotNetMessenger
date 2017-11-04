@@ -27,19 +27,10 @@ namespace DotNetMessenger.WPFClient.Windows
         public static readonly DependencyProperty LoginStringProperty =
             DependencyProperty.Register(
                 nameof(LoginString), typeof(string),
-                typeof(LoginWindow)
+                typeof(RegisterWindow)
             );
 
-        public string PasswordString
-        {
-            get => (string)GetValue(PasswordStringProperty);
-            set => SetValue(PasswordStringProperty, value);
-        }
-        public static readonly DependencyProperty PasswordStringProperty =
-            DependencyProperty.Register(
-                nameof(PasswordString), typeof(string),
-                typeof(LoginWindow)
-            );
+        public string PasswordString => PasswordBox.Password;
 
         public bool PasswordOk => PasswordBox.Password.Equals(PasswordSecondBox.Password);
 

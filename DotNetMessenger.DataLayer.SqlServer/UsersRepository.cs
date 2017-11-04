@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
@@ -230,7 +231,35 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     NLogger.Logger.Trace("DB:Deleted:{0}:WHERE UserID:{1})", "[UserInfos]", userId);
                 }
             }
-        } 
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Gets all users
+        /// </summary>
+        /// <returns>Collection of all users in DB</returns>
+        public IEnumerable<User> GetAllUsers()
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "Get_All_Users";
+                    command.CommandType = CommandType.StoredProcedure;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            yield break;
+                        while (reader.Read())
+                            yield return new UserSqlProxy
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                Username = reader.GetString(reader.GetOrdinal("Username"))
+                            };
+                    }
+                }
+            }
+        }
         /// <inheritdoc />
         /// <summary>
         /// Returns user's info given their id

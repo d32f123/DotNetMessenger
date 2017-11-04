@@ -15,7 +15,7 @@
         </DockPanel>
         <DockPanel Margin="10,2,10,0" VerticalAlignment="Top">
             <Label Content="Пароль:" HorizontalContentAlignment="Left" VerticalContentAlignment="Center"/>
-            <PasswordBox Name="PasswordBox" TextInput="{Binding Path=PasswordString}" Width="218" VerticalContentAlignment="Center" Height="23" />
+            <PasswordBox Name="PasswordBox" Width="218" VerticalContentAlignment="Center" Height="23" />
         </DockPanel>
         <Grid>
             <Grid.ColumnDefinitions>
