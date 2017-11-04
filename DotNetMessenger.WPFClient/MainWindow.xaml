@@ -16,10 +16,12 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"></RowDefinition>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="2"/>
+            <RowDefinition Height="Auto" MaxHeight="{Binding ElementName=SendMessageBox, Path=MaxHeight}"/>
         </Grid.RowDefinitions>
         <controls:UserMetaBox x:Name="CurrentUserBox" Grid.Column="0" Grid.Row="0"/>
-        <TabControl Grid.Column="0" Grid.Row="1">
+        <TabControl Grid.Column="0" Grid.Row="1" Grid.RowSpan="3">
             <TabItem Header="Пользователи">
                 <ListView x:Name="UsersListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single" 
                           SelectionChanged="UserPicker_SelectionChanged"/>
@@ -36,7 +38,9 @@
         <DockPanel x:Name="ChatDockPanel" Grid.Row="0" Grid.Column="2">
             <controls:MetaBox x:Name="CurrentChatBox" DockPanel.Dock="Left" Width="Auto" />
         </DockPanel>
-        <GridSplitter Grid.RowSpan="2"  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" />
+        <GridSplitter Grid.RowSpan="4"  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" />
         <ListView x:Name="MessagesListView" Grid.Row="1" Grid.Column="2"/>
+        <GridSplitter Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch"></GridSplitter>
+        <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="3" Grid.Column="2"/>
     </Grid>
 </Window>

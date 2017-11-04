@@ -490,12 +490,11 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             _tempChats.Add(chat.Id);
 
             _chatsRepository.SetChatSpecificRole(listenerUser.Id, chat.Id, UserRoles.Listener);
-
             // assert
-            Assert.AreEqual(listenerUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Listener);
-            Assert.AreEqual(regularUser.ChatUserInfos.Single().Role.RoleType, UserRoles.Moderator);
-            Assert.IsFalse((listenerUser.ChatUserInfos.Single().Role.RolePermissions & RolePermissions.WritePerm) != 0);
-            Assert.IsTrue((regularUser.ChatUserInfos.Single().Role.RolePermissions & RolePermissions.WritePerm) != 0);
+            Assert.AreEqual(listenerUser.ChatUserInfos.Single().Value.Role.RoleType, UserRoles.Listener);
+            Assert.AreEqual(regularUser.ChatUserInfos.Single().Value.Role.RoleType, UserRoles.Moderator);
+            Assert.IsFalse((listenerUser.ChatUserInfos.Single().Value.Role.RolePermissions & RolePermissions.WritePerm) != 0);
+            Assert.IsTrue((regularUser.ChatUserInfos.Single().Value.Role.RolePermissions & RolePermissions.WritePerm) != 0);
     }
 
         [TestCleanup]

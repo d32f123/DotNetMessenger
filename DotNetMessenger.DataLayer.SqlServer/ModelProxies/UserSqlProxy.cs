@@ -13,7 +13,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
         private UserInfo _userInfo;
 
         private bool _areChatUserInfosFetched;
-        private IEnumerable<ChatUserInfo> _chatUserInfos;
+        private Dictionary<int, ChatUserInfo> _chatUserInfos;
 
         public override IEnumerable<Chat> Chats
         {
@@ -44,14 +44,17 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
             } 
         }
 
-        public override IEnumerable<ChatUserInfo> ChatUserInfos
+        public override Dictionary<int, ChatUserInfo> ChatUserInfos
         {
             get
             {
                 if (_areChatUserInfosFetched)
                     return _chatUserInfos;
-                _chatUserInfos = RepositoryBuilder.ChatsRepository.GetUserChats(Id)
-                    .Select(x => RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(Id, x.Id));
+                _chatUserInfos = new Dictionary<int, ChatUserInfo>();
+                foreach (var userChat in RepositoryBuilder.ChatsRepository.GetUserChats(Id))
+                {
+                    _chatUserInfos.Add(userChat.Id, RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(Id, userChat.Id));
+                }
                 _areChatUserInfosFetched = true;
                 return _chatUserInfos;
             }

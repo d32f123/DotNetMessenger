@@ -5,6 +5,12 @@
              xmlns:control="clr-namespace:DotNetMessenger.WPFClient.Controls"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <Style x:Key="TextBoxBadStyle" TargetType="TextBox">
+            <Setter Property="BorderBrush" Value="Red"/>
+        </Style>
+        <Style x:Key="PasswordBoxBadStyle" TargetType="PasswordBox">
+            <Setter Property="BorderBrush" Value="Red"/>
+        </Style>
         <Style x:Key="TransparentSelectionStyle" TargetType="{x:Type ListViewItem}">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Template">

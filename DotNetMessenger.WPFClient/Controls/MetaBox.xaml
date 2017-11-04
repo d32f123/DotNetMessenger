@@ -24,7 +24,7 @@
                 </Binding>
             </Image.Source>
         </Image>
-        <Label Grid.Column="1" Grid.Row="0"  Content="{Binding Path=MetaTitle}"/>
-        <Label Grid.Column="1" Grid.Row="2" Content="{Binding Path=MetaSecondaryInfo}" Style="{StaticResource SecondaryLabelStyle}"/>
+        <Label Grid.Column="1" Grid.Row="0"  Content="{Binding Path=MetaTitle, Mode=TwoWay}"/>
+        <Label Grid.Column="1" Grid.Row="2" Content="{Binding Path=MetaSecondaryInfo, Mode=TwoWay}" Style="{StaticResource SecondaryLabelStyle}"/>
     </Grid>
 </UserControl>

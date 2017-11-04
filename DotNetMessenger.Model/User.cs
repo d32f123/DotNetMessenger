@@ -32,7 +32,7 @@ namespace DotNetMessenger.Model
         /// Information regarding a specific chat the user is in
         /// e. g. role, nickname
         /// </summary>
-        public virtual IEnumerable<ChatUserInfo> ChatUserInfos { get; set; }
+        public virtual Dictionary<int, ChatUserInfo> ChatUserInfos { get; set; }
 
         public User()
         {

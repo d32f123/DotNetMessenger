@@ -15,6 +15,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using DotNetMessenger.Model;
 using DotNetMessenger.WPFClient.Controls;
+using DotNetMessenger.WPFClient.Windows;
 
 namespace DotNetMessenger.WPFClient
 {
@@ -23,6 +24,31 @@ namespace DotNetMessenger.WPFClient
     /// </summary>
     public partial class MainWindow : Window
     {
+        #region Business logic
+        private User CurrentUser;
+
+        private (Guid, User) LoginUser()
+        {
+            bool done = false;
+            while (!done)
+            {
+                var welcomeWindow = new WelcomeWindow();
+                welcomeWindow.ShowDialog();
+                if (welcomeWindow.DialogResult == null || welcomeWindow.DialogResult == false)
+                    return null;
+                if (!welcomeWindow.UserRegistered)
+                {
+                    var registerWindow = new RegisterWindow();
+                    registerWindow.ShowDialog();
+                    if (registerWindow.DialogResult == null || registerWindow.DialogResult == false)
+                        continue;
+
+                }
+            }
+        }
+        #endregion
+
+        #region View
         public readonly ObservableCollection<UserMetaBox> UsersMetaBoxs = new ObservableCollection<UserMetaBox>();
         public readonly ObservableCollection<ChatMetaBox> ChatsMetaBoxs = new ObservableCollection<ChatMetaBox>();
         public readonly ObservableCollection<MetaBox> HistoryMetaBoxs = new ObservableCollection<MetaBox>();
@@ -31,11 +57,6 @@ namespace DotNetMessenger.WPFClient
         public MainWindow()
         {
             InitializeComponent();
-            CurrentUserBox.DisplayedUser = new User
-            {
-                Username = "d32f123",
-                UserInfo = new UserInfo {FirstName = "Andrey", LastName = "Nesterov"}
-            };
             UsersMetaBoxs.Add(new UserMetaBox(new User
             {
                 Username = "Temыч",
@@ -56,6 +77,12 @@ namespace DotNetMessenger.WPFClient
             {
                 Text = "Hey there!"
             }));
+
+            /* WELCOME WINDOW */
+            
+            var welcomeWindow = new WelcomeWindow();
+            welcomeWindow.ShowDialog();
+
 
             UsersListView.ItemsSource = UsersMetaBoxs;
             ChatsListView.ItemsSource = ChatsMetaBoxs;
@@ -102,5 +129,6 @@ namespace DotNetMessenger.WPFClient
             SetCurrentChatBox((MetaBox)e.AddedItems[0]);
             /* TODO: OPEN DIALOG */
         }
+        #endregion 
     }
 }
