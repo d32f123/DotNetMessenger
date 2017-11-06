@@ -63,13 +63,12 @@ namespace DotNetMessenger.WPFClient.Windows
 
         private async void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            var token = await RestClient.GetUserTokenAsync(LoginString, PasswordString);
-            if (token.Equals(Guid.Empty))
+            var loggedIn = await RestClient.LoginAsync(LoginString, PasswordString);
+            if (!loggedIn)
             {
                 BadPasswordLabel.Visibility = Visibility.Visible;
                 return;
             }
-            Token = token;
             DialogResult = true;
             this.Close();
         }

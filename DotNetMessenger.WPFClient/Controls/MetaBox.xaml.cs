@@ -35,6 +35,11 @@ namespace DotNetMessenger.WPFClient.Controls
             get => (byte[])GetValue(MetaImageProperty);
             set => SetValue(MetaImageProperty, value);
         }
+        public DateTime MetaDateTime
+        {
+            get => (DateTime) GetValue(MetaDateTimeProperty);
+            set => SetValue(MetaDateTimeProperty, value);
+        }
 
         public static readonly DependencyProperty MetaTitleProperty =
             DependencyProperty.Register(
@@ -54,9 +59,16 @@ namespace DotNetMessenger.WPFClient.Controls
                 typeof(MetaBox)
             );
 
+        public static readonly DependencyProperty MetaDateTimeProperty = 
+            DependencyProperty.Register(
+                nameof(MetaDateTime), typeof(DateTime),
+                typeof(MetaBox)
+            );
+
         public MetaBox()
         {
             InitializeComponent();
+            MetaDateTime = DateTime.MinValue;
         }
     }
 }

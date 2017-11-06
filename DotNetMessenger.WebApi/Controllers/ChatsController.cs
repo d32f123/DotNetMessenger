@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -8,6 +9,7 @@ using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
+using DotNetMessenger.WebApi.Events;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Filters.Logging;
@@ -112,6 +114,21 @@ namespace DotNetMessenger.WebApi.Controllers
             }
         }
         /// <summary>
+        /// Creates or fetches an existing dialog between the two users
+        /// </summary>
+        /// <param name="user1">User 1</param>
+        /// <param name="user2">User 2</param>
+        /// <returns>A chat between the two users</returns>
+        [Route("dialog/{user1:int}/{user2:int}")]
+        [HttpGet]
+        public Chat CreateOrGetDialogChat(int user1, int user2)
+        {
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", user1, user2);
+            var chat = RepositoryBuilder.ChatsRepository.CreateOrGetDialog(user1, user2);
+            NLogger.Logger.Info("Fetched dialog between {0} and {1}. Id: {2}", user1, user2, chat.Id);
+            return chat;
+        }
+        /// <summary>
         /// Deletes chat. User must be the creator of the chat
         /// </summary>
         /// <param name="id">Chat's id</param>
@@ -191,14 +208,34 @@ namespace DotNetMessenger.WebApi.Controllers
         [Route("{id:int}/users")]
         [HttpGet]
         [ChatUserAuthorization(RegexString = RegexString)]
-        public User[] GetChatUsers(int id)
+        public List<User> GetChatUsers(int id)
         {
             NLogger.Logger.Debug("Called with arguments: {0}", id);
             using (var timeLog = new ChronoLogger("Fetching chat users for id: {0}", id))
             {
                 timeLog.Start();
-                var users = RepositoryBuilder.ChatsRepository.GetChatUsers(id) as User[] ??
-                            RepositoryBuilder.ChatsRepository.GetChatUsers(id).ToArray();
+                var users = RepositoryBuilder.ChatsRepository.GetChatUsers(id) as List<User> ??
+                            RepositoryBuilder.ChatsRepository.GetChatUsers(id).ToList();
+                users.ForEach(x =>
+                {
+                    if (x.ChatUserInfos != null)
+                    {
+                        if (x.ChatUserInfos.ContainsKey(id))
+                        {
+                            var value = x.ChatUserInfos[id];
+                            x.ChatUserInfos.Clear();
+                            x.ChatUserInfos.Add(id, value);
+                        }
+                        else
+                        {
+                            x.ChatUserInfos = null;
+                        }
+                    }
+                    if (x.Chats != null)
+                    {
+                        x.Chats = x.Chats.Where(y => y.Id == id).ToList();
+                    }
+                });
                 NLogger.Logger.Info("Successfully fetched chat users of chat: {0}", id);
                 return users;
             }
@@ -446,6 +483,46 @@ namespace DotNetMessenger.WebApi.Controllers
                 });
                 NLogger.Logger.Info("Successfully cleared chat-specific user info for caller in chat {0}", chatId);
             }
+        }
+        /// <summary>
+        /// Creates a subscription for new messages
+        /// </summary>
+        /// <param name="chatId">The id of the chat to be subscribed to</param>
+        /// <param name="messageId">Latest message that the client has</param>
+        /// <returns>List of new messages for the client</returns>
+        [Route("{chatId:int}/subscribe/{messageId:int}")]
+        [HttpGet]
+        [ChatUserAuthorization(RegexString = RegexString)]
+        public List<Message> SubscribeForNewMessages(int chatId, int messageId)
+        {
+            Message currMsg;
+            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, messageId);
+            try
+            {
+                NLogger.Logger.Debug("Fetching current message");
+                currMsg = messageId >= 0
+                    ? RepositoryBuilder.MessagesRepository.GetMessage(messageId)
+                    : RepositoryBuilder.MessagesRepository.GetLastChatMessage(chatId);
+            }
+            catch
+            {
+                NLogger.Logger.Debug("Invalid ID provided. Will subscribe to any new message");
+                currMsg = null;
+            }
+            if (currMsg != null && RepositoryBuilder.MessagesRepository.GetLastChatMessage(chatId).Date
+                    .CompareTo(currMsg.Date) > 0)
+            {
+                NLogger.Logger.Debug("Subscriber does not have latest messages. Fetching new messages and returning");
+                return RepositoryBuilder.MessagesRepository.GetChatMessagesFrom(chatId, currMsg.Date).Where(x => x.Id != currMsg.Id).ToList();
+            }
+            NLogger.Logger.Debug("Creating a poller to subscribe to new messages for chatid: {0}", chatId);
+            var poller = new SinglePoller(new ChatSubscriptions(), chatId);
+            while (!poller.SubscriptionInvoked)
+                Thread.Sleep(500);
+            NLogger.Logger.Debug("New message received for chatId: {0}. Returning the message to subscirber", chatId);
+            return currMsg == null
+                ? RepositoryBuilder.MessagesRepository.GetChatMessages(chatId).ToList()
+                : RepositoryBuilder.MessagesRepository.GetChatMessagesFrom(chatId, currMsg.Date).Where(x => x.Id != currMsg.Id).ToList();
         }
     }
 }

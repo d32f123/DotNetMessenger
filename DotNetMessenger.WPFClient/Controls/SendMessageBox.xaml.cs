@@ -22,7 +22,7 @@ namespace DotNetMessenger.WPFClient.Controls
     /// </summary>
     public partial class SendMessageBox : UserControl
     {
-        private User _user;
+        private int _chatId;
 
         public string MessageText
         {
@@ -47,32 +47,48 @@ namespace DotNetMessenger.WPFClient.Controls
 
         public ObservableCollection<Attachment> MessageAttachments { get; set; } = new ObservableCollection<Attachment>();
 
-        public void SetMessageBox(User user, int chatId)
+        public async Task SetMessageBox(int chatId, bool isDialog)
         {
-            _user = user;
-            var perms = user?.ChatUserInfos?[chatId]?.Role?.RolePermissions;
-            if (perms == null)
-            {
-                SendButton.Visibility = Visibility.Collapsed;
-                AttachButton.Visibility = Visibility.Collapsed;
-                TimeExpander.Visibility = Visibility.Collapsed;
-                return;
-            }
+            _chatId = chatId;
+            var info = await RestClient.GetChatUserInfoAsync(chatId);
+            var perms = isDialog ? (RolePermissions.WritePerm | RolePermissions.AttachPerm) :
+                info?.Role?.RolePermissions ?? RolePermissions.WritePerm;
             if ((perms & RolePermissions.WritePerm) != 0)
             {
                 SendButton.Visibility = Visibility.Visible;
                 TimeExpander.Visibility = Visibility.Visible;
                 MainTextBox.Visibility = Visibility.Visible;
             }
-            if ((perms & RolePermissions.AttachPerm) != 0)
+            else
             {
-                AttachButton.Visibility = Visibility.Visible;
+                SendButton.Visibility = Visibility.Hidden;
+                TimeExpander.Visibility = Visibility.Hidden;
+                MainTextBox.Visibility = Visibility.Hidden;
             }
+            AttachButton.Visibility = (perms & RolePermissions.AttachPerm) != 0 ? Visibility.Visible : Visibility.Hidden;
+            MessageText = string.Empty;
         }
 
         public SendMessageBox()
         {
             InitializeComponent();
         }
+
+        private async void SendButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var message = new Message
+            {
+                ChatId = _chatId,
+                SenderId = RestClient.UserId,
+                Text = MessageText,
+                Date = DateTime.Now,
+                ExpirationDate = MessageExpiration == 0 ? null : (DateTime?) DateTime.Now.AddSeconds(MessageExpiration),
+                Attachments = MessageAttachments
+            };
+            await RestClient.SendMessageAsync(_chatId, message);
+            MessagePosted?.Invoke(this, message);
+        }
+
+        public event EventHandler<Message> MessagePosted;
     }
 }

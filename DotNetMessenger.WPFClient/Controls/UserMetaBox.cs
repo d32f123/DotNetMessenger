@@ -17,9 +17,9 @@ namespace DotNetMessenger.WPFClient.Controls
             set
             {
                 _displayedUser = value;
-                base.MetaImage = _displayedUser.UserInfo.Avatar;
+                base.MetaImage = _displayedUser.UserInfo?.Avatar;
                 base.MetaTitle = _displayedUser.Username;
-                base.MetaSecondaryInfo = _displayedUser.UserInfo.LastAndFirstName;
+                base.MetaSecondaryInfo = _displayedUser.UserInfo?.LastAndFirstName;
             }
         }
 

@@ -57,8 +57,8 @@ GO
 CREATE OR ALTER PROCEDURE Get_Message
 	@messageId	INT
 AS
-	SELECT a.[Username], a.[Text], a.[Date], a.[ChatID], b.[ChatTitle], c.[ExpireDate] 
-	FROM(SELECT u.[Username] Username, m.[MessageText] [Text], m.[MessageDate] [Date], m.[ChatID] ChatID
+	SELECT a.[UserID], a.[Username], a.[Text], a.[Date], a.[ChatID], b.[ChatTitle], c.[ExpireDate] 
+	FROM(SELECT u.[ID] UserID, u.[Username] Username, m.[MessageText] [Text], m.[MessageDate] [Date], m.[ChatID] ChatID
 			FROM [Messages] m, [Users] u 
 			WHERE m.[ID] = @messageId AND u.[ID] = m.[SenderID]) a
 	LEFT JOIN (SELECT ci.[ChatID], ci.[Title] ChatTitle FROM [ChatInfos] ci) b ON a.[ChatID] = b.[ChatID]
@@ -118,6 +118,16 @@ AS
 				AND  u.[ID] = m.[SenderID]) a
 	LEFT JOIN (SELECT ci.[ChatID], ci.[Title] ChatTitle FROM [ChatInfos] ci) b ON a.[ChatID] = b.[ChatID]
 	LEFT JOIN (SELECT mdq.[MessageID], mdq.[ExpireDate] FROM [MessagesDeleteQueue] mdq) c ON c.[MessageID] = a.[ID];
+GO
+
+CREATE OR ALTER PROCEDURE Get_Last_Chat_Message
+	@chatId		INT
+AS
+	IF NOT EXISTS(SELECT * FROM [Chats] WHERE [ID] = @chatId)
+		THROW 50000, 'id is invalid', 1
+	SELECT TOP(1) m.[ID], m.[SenderID], m.[ChatID], m.[MessageText], m.[MessageDate] FROM [Messages] m
+	WHERE m.[ChatID] = @chatId ORDER BY m.[MessageDate] DESC
+	RETURN;
 GO
 
 CREATE OR ALTER PROCEDURE Get_Chat_Messages_From
@@ -230,9 +240,10 @@ BEGIN CONVERSATION timer (@h) TIMEOUT= 1;
 
 DECLARE @date DATETIME
 SET @date = CONVERT(DATETIME, '11:21:00', 108);
-EXECUTE Store_Message 1, 1, 'hey', @date;
+EXECUTE Store_Message 17, 15, 'hey', NULL;
 EXECUTE Get_Message 1012;
 EXECUTE Get_Message_Attachments 4;
+EXEC Get_Last_Chat_Message 15;
 
 EXEC DeleteExpiredMessages;
 

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 
 namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
@@ -38,7 +39,14 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
             {
                 if (_isUserInfoFetched)
                     return _userInfo;
-                _userInfo = RepositoryBuilder.UsersRepository.GetUserInfo(Id);
+                try
+                {
+                    _userInfo = RepositoryBuilder.UsersRepository.GetUserInfo(Id);
+                }
+                catch
+                {
+                    _userInfo = null;
+                }
                 _isUserInfoFetched = true;
                 return _userInfo;
             } 
@@ -53,7 +61,16 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
                 _chatUserInfos = new Dictionary<int, ChatUserInfo>();
                 foreach (var userChat in RepositoryBuilder.ChatsRepository.GetUserChats(Id))
                 {
-                    _chatUserInfos.Add(userChat.Id, RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(Id, userChat.Id));
+                    ChatUserInfo info;
+                    try
+                    {
+                        info = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(Id, userChat.Id);
+                    }
+                    catch (ChatTypeMismatchException)
+                    {
+                        info = null;
+                    }
+                    _chatUserInfos.Add(userChat.Id, info);
                 }
                 _areChatUserInfosFetched = true;
                 return _chatUserInfos;

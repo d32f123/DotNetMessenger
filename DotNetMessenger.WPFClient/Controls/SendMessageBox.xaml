@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:DotNetMessenger.WPFClient.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="300" MaxHeight="80" DataContext="{Binding RelativeSource={RelativeSource Self}}">
+             d:DesignHeight="300" d:DesignWidth="300" MaxHeight="114" DataContext="{Binding RelativeSource={RelativeSource Self}}">
     <Grid Visibility="{Binding Path=Visibility}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
@@ -15,11 +15,11 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TextBox x:Name="MainTextBox" Grid.Row="0" VerticalScrollBarVisibility="Auto" MaxLines="5" MinLines="1" MaxLength="500"
+        <TextBox x:Name="MainTextBox" Grid.Row="0" VerticalScrollBarVisibility="Auto" MaxLines="7" MinLines="1" MaxLength="500"
                     Grid.RowSpan="2" Grid.Column="0" TextWrapping="Wrap"
                     Text="{Binding Path=MessageText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Visibility="Hidden"/>
         <StackPanel Grid.Row="0" Grid.Column="1">
-            <Button Name="SendButton" Content="Send" Margin="2px,0,2px,0" Visibility="Collapsed"/>
+            <Button Name="SendButton" Content="Send" Margin="2px,0,2px,0" Visibility="Collapsed" Click="SendButton_OnClick"/>
             <Button Name="AttachButton" Content="Attach" Margin="2px,0,2px,0" Visibility="Collapsed"/>
         </StackPanel>
         <Expander Name="TimeExpander" Grid.Row="1" Grid.Column="1" Header="Таймер" Visibility="Collapsed">

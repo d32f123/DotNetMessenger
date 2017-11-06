@@ -68,6 +68,13 @@ namespace DotNetMessenger.WPFClient.Controls
 
         public ObservableCollection<byte[]> MessageAttachments { get; set; } = new ObservableCollection<byte[]>();
 
+        private async void SetInfo()
+        {
+            var user = await RestClient.GetUserAsync(_message.SenderId);
+            SenderName = user.Username;
+            SenderAvatar = user.UserInfo?.Avatar;
+        }
+
         private Message _message;
         public Message ChatMessage
         {
@@ -75,9 +82,7 @@ namespace DotNetMessenger.WPFClient.Controls
             set
             {
                 _message = value;
-                /* TODO: SET AVATAR */
-                SenderAvatar = null;
-                SenderName = _message.SenderId.ToString();
+                SetInfo();
                 MessageText = _message.Text;
                 MessageDateTime = _message.Date;
                 /* TODO: SHOW REGULAR FILES (AND ALLOW DOWNLOAD?) */
@@ -106,7 +111,9 @@ namespace DotNetMessenger.WPFClient.Controls
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
             if (!(value is DateTime dateTime)) return null;
-            return dateTime.ToString(dateTime.Date.Equals(DateTime.Now.Date) ? "T" : "g");
+            return dateTime == DateTime.MinValue
+                ? string.Empty
+                : dateTime.ToString(dateTime.Date.Equals(DateTime.Now.Date) ? "T" : "g");
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)

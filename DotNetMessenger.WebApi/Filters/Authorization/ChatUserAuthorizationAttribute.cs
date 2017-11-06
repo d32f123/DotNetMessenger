@@ -7,6 +7,7 @@ using System.Threading;
 using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
@@ -65,7 +66,15 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
 
                 // check if principal user id is the same as the id extracted from uri
                 NLogger.Logger.Debug("Getting user role");
-                var chatInfo = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(principal.UserId, chatId);
+                ChatUserInfo chatInfo;
+                try
+                {
+                    chatInfo = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(principal.UserId, chatId);
+                }
+                catch (ChatTypeMismatchException)
+                {
+                    chatInfo = null;
+                }
                 var userRole = chatInfo?.Role ?? RepositoryBuilder.ChatsRepository.GetUserRole(UserRoles.Regular);
                 NLogger.Logger.Debug("Fetched role: {0}", userRole);
                 

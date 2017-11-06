@@ -5,9 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DotNetMessenger.WPFClient"
         xmlns:controls="clr-namespace:DotNetMessenger.WPFClient.Controls"
+        xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
         mc:Ignorable="d"
         Title="Messenger" Height="350" Width="625" MinWidth="630" MinHeight="350"
         DataContext="{Binding RelativeSource={RelativeSource Self}}">
+    <Window.Resources>
+        <CollectionViewSource x:Key="HistorySorted" Source="{Binding Path=HistoryMetaBoxs}" >
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="MetaDateTime"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
+    </Window.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*" MaxWidth="500"  MinWidth="200"/>

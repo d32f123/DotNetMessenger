@@ -244,6 +244,42 @@ namespace DotNetMessenger.DataLayer.SqlServer
         }
         /// <inheritdoc />
         /// <summary>
+        /// Gets last message of the chat
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <returns>The last message in the chat</returns>
+        public Message GetLastChatMessage(int chatId)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                if (!SqlHelper.DoesFieldValueExist(connection, "Chats", "ID", chatId, SqlDbType.Int))
+                    throw new ArgumentException();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "Get_Last_Chat_Message";
+                    command.Parameters.AddWithValue("@chatId", chatId);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            throw new ArgumentException();
+                        reader.Read();
+                        return new MessageSqlProxy
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                            ChatId = chatId,
+                            Text = reader.IsDBNull(reader.GetOrdinal("MessageText")) ? null : reader.GetString(reader.GetOrdinal("MessageText")),
+                            SenderId = reader.GetInt32(reader.GetOrdinal("SenderID")),
+                            Date = reader.GetDateTime(reader.GetOrdinal("MessageDate")),
+                        };
+                    }
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
         /// Returns a list of <see cref="T:DotNetMessenger.Model.Message" />s in <paramref name="chatId" />
         /// in date interval: [<paramref name="dateFrom" />; +inf)
         /// </summary>

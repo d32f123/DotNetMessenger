@@ -101,7 +101,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var chat2 = _chatsRepository.CreateOrGetDialog(users[0].Id, users[1].Id);
 
             // assert
-            Assert.AreEqual(chat, chat2);
+            Assert.AreEqual(chat.Id, chat2.Id);
             var i = 0;
             foreach (var user in chat.Users)
             {

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
 
 namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
 {
@@ -31,7 +32,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
             {
                 if (_isInfoFetched)
                     return _info;
-                _info = RepositoryBuilder.ChatsRepository.GetChatInfo(Id);
+                _info = ChatType != ChatTypes.Dialog ? RepositoryBuilder.ChatsRepository.GetChatInfo(Id) : null;
                 _isInfoFetched = true;
                 return _info;
             }

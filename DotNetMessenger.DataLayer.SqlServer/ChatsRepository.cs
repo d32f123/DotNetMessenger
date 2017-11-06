@@ -177,9 +177,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                     using (var reader = command.ExecuteReader())
                     {
-                        while (reader.NextResult()) ;
-                        reader.Read();
-                        var id = reader.GetInt32(reader.GetOrdinal("ID"));
+                        var id = SqlHelper.GetLastResult<int>(reader, "ID");
+                        NLogger.Logger.Trace("DB:CreateOrGet:{0}:{1}", member1, member2);
                         return GetChat(id);
                     }
                 }

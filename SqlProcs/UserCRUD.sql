@@ -109,7 +109,7 @@ AS
 GO
 
 EXECUTE Get_All_Users;
-EXECUTE Create_User 'd32f123', 'x';
+EXECUTE Create_User 'admin1', 'x';
 EXECUTE Delete_User 2;
 EXECUTE Get_User 2;
 EXECUTE Get_User_By_Username 'd32f1234';

@@ -16,8 +16,8 @@ namespace DotNetMessenger.WPFClient.Controls
             set
             {
                 _displayedChat = value;
-                base.MetaImage = _displayedChat.Info.Avatar;
-                base.MetaTitle = string.IsNullOrEmpty(_displayedChat.Info.Title)
+                base.MetaImage = _displayedChat.Info?.Avatar;
+                base.MetaTitle = string.IsNullOrEmpty(_displayedChat.Info?.Title)
                     ? $"#{_displayedChat.Id}"
                     : _displayedChat.Info.Title;
                 base.MetaSecondaryInfo = null;

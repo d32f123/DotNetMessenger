@@ -46,17 +46,22 @@ CREATE OR ALTER PROCEDURE CreateOrGet_Dialog
 	@user2		INT
 AS
 DECLARE @chatId INT
-	SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
-	WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] 
-		AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
-			OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)
+	IF @user1 <> @user2
+		SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
+		WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] AND 1 = (SELECT COUNT(*) FROM [ChatUsers] df WHERE df.[ChatID] = c.[ID])
+			AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
+				OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)
+	ELSE
+		SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
+		WHERE COUNT(cu.ChatID) = 1
 	IF (@@ROWCOUNT <> 0)
 		RETURN
 	BEGIN TRANSACTION
 	BEGIN TRY
 		INSERT INTO [Chats] ([ChatType], [CreatorID]) VALUES (0, @user1);
 		SET @chatId = @@IDENTITY;
-		INSERT INTO [ChatUsers] ([ChatID], [UserID]) VALUES (@chatId, @user2);
+		IF @user1 <> @user2
+			INSERT INTO [ChatUsers] ([ChatID], [UserID]) VALUES (@chatId, @user2);
 	END TRY
 	BEGIN CATCH
 		ROLLBACK TRANSACTION;
@@ -253,9 +258,9 @@ GO
 --TODO: ChatSpecificInfo, Role
 
 DECLARE @idlist IDListType;
-INSERT @idlist ([ID]) VALUES (3), (436);
+INSERT @idlist ([ID]) VALUES (17), (19), (20);
 EXECUTE Create_Chat @idlist, 'nice', 1;
-EXECUTE CreateOrGet_Dialog 1, 2;
+EXECUTE CreateOrGet_Dialog 2, 2;
 EXECUTE Get_Chat 1;
 EXECUTE Get_All_Chats;
 EXECUTE Delete_Chat 7;
@@ -270,7 +275,7 @@ INSERT @idlist2 ([ID]) VALUES (1), (0);
 EXECUTE Kick_Users 9, @idlist2;
 EXECUTE Kick_User 1, 1;
 
-EXECUTE Get_Chat_Users 1003;
+EXECUTE Get_Chat_Users 1;
 EXECUTE Get_User_Chats 6;
 
 EXECUTE Get_Chat_Info 1;
@@ -283,3 +288,8 @@ EXECUTE Get_ChatSpecific_UserInfo 2, 1;
 EXECUTE Clear_ChatSpecific_UserInfo 2, 1;
 
 DELETE [ChatUserInfos] WHERE [ChatID] = 1 AND [UserID] = 1
+
+SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
+		WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] AND (SELECT COUNT(*) FROM [ChatUsers] WHERE cu.ChatID = c.[ID]) = 1
+			AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
+				OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)

@@ -55,6 +55,23 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
         }
 
         [TestMethod]
+        public void Should_StoreAndReturnLastMessage()
+        {
+            // arrange
+            const string text = "Some text right here alright";
+            // act
+            _messagesRepository.StoreMessage(_userId, _chatId, text);
+            var msg = _messagesRepository.GetLastChatMessage(_chatId);
+            // assert
+            Assert.IsNotNull(msg);
+            Assert.AreEqual(msg.SenderId, _userId);
+            Assert.AreEqual(msg.ChatId, _chatId);
+            Assert.IsTrue(!msg.Attachments.Any());
+            Assert.IsNull(msg.ExpirationDate);
+            Assert.AreEqual(msg.Text, text);
+        }
+
+        [TestMethod]
         public void Should_ThrowArgumentNullException_When_StoreEmptyMessage()
         {
             // act and assert

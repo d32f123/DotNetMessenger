@@ -5,8 +5,11 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
+using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
+using DotNetMessenger.WebApi.Events;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Filters.Logging;
@@ -38,9 +41,19 @@ namespace DotNetMessenger.WebApi.Controllers
             NLogger.Logger.Debug("Called with arguments CID:{0}, UID:{1}, MSG:{2}", chatId, userId, message);
 
             // if no attach permissions and attachments are not empty
-            if ((RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId).Role.RolePermissions &
-                    RolePermissions.AttachPerm) == 0 &&
-                (message.Attachments == null || message.Attachments.Count() != 0))
+            RolePermissions perms;
+            try
+            {
+                perms = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(userId, chatId)?.Role?.RolePermissions
+                        ?? RolePermissions.WritePerm;
+            }
+            catch (ChatTypeMismatchException)
+            {
+                perms = RolePermissions.WritePerm | RolePermissions.AttachPerm;
+            }
+
+            if ((perms & RolePermissions.AttachPerm) == 0 &&
+                message.Attachments != null && message.Attachments.Count() != 0)
             {
                 NLogger.Logger.Error(
                     "User does not have enough permissions to store a message! UserID: {0}, ChatID: {1}, Message: {2}",
@@ -59,6 +72,8 @@ namespace DotNetMessenger.WebApi.Controllers
                         message.Attachments);
                     NLogger.Logger.Info("Successfully stored message from UID:{0} to CID:{1}. Message: {2}",
                         userId, chatId, msg);
+                    NLogger.Logger.Debug("Notifying subscribers about a new message");
+                    new ChatSubscriptions().InvokeFor(this, chatId);
                     return msg;
                 }
             }
@@ -70,8 +85,25 @@ namespace DotNetMessenger.WebApi.Controllers
                 var msg = RepositoryBuilder.MessagesRepository.StoreTemporaryMessage(userId, chatId, message.Text,
                     (DateTime) message.ExpirationDate, message.Attachments);
                 NLogger.Logger.Info("Successfully stored message with e.d from UID: {0} to CID:{1}. Message: {2}", userId, chatId, msg);
+                NLogger.Logger.Debug("Notifying subscribers about a new message");
+                new ChatSubscriptions().InvokeFor(this, chatId);
                 return msg;
             }
+        }
+        /// <summary>
+        /// Gets the last message in the chat
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <returns>Last message</returns>
+        [Route("{chatId:int}/last")]
+        [HttpGet]
+        [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ReadPerm)]
+        public Message GetLastChatMessage(int chatId)
+        {
+            NLogger.Logger.Debug("Called with argument: {0}", chatId);
+            var message = RepositoryBuilder.MessagesRepository.GetLastChatMessage(chatId);
+            NLogger.Logger.Info("Successfully fetched message with id: {0}", message.Id);
+            return message;
         }
         /// <summary>
         /// Gets a message given its <paramref name="messageId"/>. User performing the request must be in the same 

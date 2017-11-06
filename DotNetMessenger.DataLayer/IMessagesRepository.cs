@@ -56,6 +56,12 @@ namespace DotNetMessenger.DataLayer
         /// <seealso cref="GetChatMessagesInRange"/>
         IEnumerable<Message> GetChatMessages(int chatId);
         /// <summary>
+        /// Gets last message of the chat
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <returns>The last message in the chat</returns>
+        Message GetLastChatMessage(int chatId);
+        /// <summary>
         /// Get all messages in a chat starting from <paramref name="dateFrom"/>
         /// </summary>
         /// <param name="chatId">The id of the chat</param>

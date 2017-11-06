@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Text;
@@ -110,6 +111,26 @@ namespace DotNetMessenger.DataLayer.SqlServer
 
                 return ((int) command.ExecuteScalar()) > 0;
             }
+        }
+
+        public static T GetLastResult<T>(SqlDataReader reader, string fieldName)
+        {
+            var ret = default(T);
+            do
+            {
+                if (!reader.HasRows)
+                    continue;
+                reader.Read();
+                try
+                {
+                    ret = reader.GetFieldValue<T>(reader.GetOrdinal(fieldName));
+                }
+                catch
+                {
+                    ret = default(T);
+                }
+            } while (reader.NextResult());
+            return ret;
         }
     }
 }
