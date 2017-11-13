@@ -58,6 +58,31 @@ namespace DotNetMessenger.WPFClient
                 break;
             }
         }
+
+        private async Task AddUserAndSubscribe(User x)
+        {
+            UsersMetaBoxs.Add(new UserMetaBox(x));
+
+            var dialog = (await RestClient.GetDialogChatAsync(x.Id)).Id;
+
+            var message = await RestClient.GetLatestChatMessageAsync(dialog);
+            RestClient.SubscribeForNewMesages(dialog, message?.Id ?? -1, NewMessagesHandler);
+            if (message == null) return;
+            var box = new HistoryMetaBox(x);
+            box.InfoFetched += OnHistoryInfoFetched;
+            HistoryMetaBoxs.Add(box);
+        }
+
+        private async Task AddChatAndSubscribe(Chat x)
+        {
+            ChatsMetaBoxs.Add(new ChatMetaBox(x));
+            var message = await RestClient.GetLatestChatMessageAsync(x.Id);
+            RestClient.SubscribeForNewMesages(x.Id, message?.Id ?? -1, NewMessagesHandler);
+            if (message == null) return;
+            var box = new HistoryMetaBox(x);
+            box.InfoFetched += OnHistoryInfoFetched;
+            HistoryMetaBoxs.Add(box);
+        }
         #endregion
 
         #region View
@@ -90,37 +115,13 @@ namespace DotNetMessenger.WPFClient
             /* Get all users and display them */
             var users = RestClient.GetAllUsersAsync().Result;
             if (users != null && users.Any())
-                users.ForEach(x => UsersMetaBoxs.Add(new UserMetaBox(x)));
+                users.ForEach(async x => await AddUserAndSubscribe(x));
 
             /* Get user's groups and display them */
             var chats = RestClient.GetUserChatsAsync().Result?.Where(x => x.ChatType != ChatTypes.Dialog).ToList();
             if (chats != null && chats.Any())
-                chats.ForEach(x => ChatsMetaBoxs.Add(new ChatMetaBox(x)));
+                chats.ForEach(async x => await AddChatAndSubscribe(x));
 
-            /* Get History */
-            if (users != null && users.Any())
-                users.ForEach(async x =>
-                {
-                    var dialog = (await RestClient.GetDialogChatAsync(x.Id)).Id;
-                    
-
-                    var message = await RestClient.GetLatestChatMessageAsync(dialog);
-                    RestClient.SubscribeForNewMesages(dialog, message?.Id ?? -1, NewMessagesHandler);
-                    if (message == null) return;
-                    var box = new HistoryMetaBox(x);
-                    box.InfoFetched += OnHistoryInfoFetched;
-                    HistoryMetaBoxs.Add(box);
-                });
-            if (chats != null && chats.Any())
-                chats.ForEach(async x =>
-                {
-                    var message = await RestClient.GetLatestChatMessageAsync(x.Id);
-                    RestClient.SubscribeForNewMesages(x.Id, message?.Id ?? -1, NewMessagesHandler);
-                    if (message == null) return;
-                    var box = new HistoryMetaBox(x);
-                    box.InfoFetched += OnHistoryInfoFetched;
-                    HistoryMetaBoxs.Add(box);
-                });
             HistoryListView.ItemsSource = HistoryMetaBoxs;
             var view = (CollectionView)CollectionViewSource.GetDefaultView(HistoryListView.ItemsSource);
             view.SortDescriptions.Add(new SortDescription("MetaDateTime", ListSortDirection.Descending));
@@ -244,6 +245,17 @@ namespace DotNetMessenger.WPFClient
         private void OnHistoryInfoFetched(object sender, EventArgs eventArgs)
         {
             CollectionViewSource.GetDefaultView(HistoryListView.ItemsSource).Refresh();
+        }
+
+        private async void CreateGroupMenuItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            var newGroupWindow = new NewGroupWindow(UsersMetaBoxs.Select(x => x.DisplayedUser).Where(x => x.Id != RestClient.UserId));
+            newGroupWindow.ShowDialog();
+            if (newGroupWindow.DialogResult != null && (bool)newGroupWindow.DialogResult)
+            {
+                var chat = await RestClient.CreateNewGroupChat(newGroupWindow.SelectedUsers.Select(x => x.Id));
+                await AddChatAndSubscribe(chat);
+            }
         }
     }
 }

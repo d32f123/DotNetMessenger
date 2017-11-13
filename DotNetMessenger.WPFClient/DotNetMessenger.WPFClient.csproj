@@ -84,6 +84,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Classes\ChatCredentials.cs" />
     <Compile Include="Classes\UserCredentials.cs" />
     <Compile Include="Controls\ChatMetaBox.cs" />
     <Compile Include="Controls\ChatMessageBox.xaml.cs">
@@ -97,6 +98,9 @@
     <Compile Include="StringExtensions.cs" />
     <Compile Include="Windows\LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Windows\NewGroupWindow.xaml.cs">
+      <DependentUpon>NewGroupWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Windows\RegisterWindow.xaml.cs">
       <DependentUpon>RegisterWindow.xaml</DependentUpon>
@@ -133,6 +137,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Windows\LoginWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Windows\NewGroupWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

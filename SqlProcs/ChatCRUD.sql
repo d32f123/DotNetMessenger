@@ -48,12 +48,14 @@ AS
 DECLARE @chatId INT
 	IF @user1 <> @user2
 		SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
-		WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] AND 1 = (SELECT COUNT(*) FROM [ChatUsers] df WHERE df.[ChatID] = c.[ID])
+		WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID]
 			AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
 				OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)
 	ELSE
 		SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
-		WHERE COUNT(cu.ChatID) = 1
+		WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] AND 1 = (SELECT COUNT(*) FROM [ChatUsers] df WHERE df.[ChatID] = c.[ID])
+			AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
+				OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)
 	IF (@@ROWCOUNT <> 0)
 		RETURN
 	BEGIN TRANSACTION

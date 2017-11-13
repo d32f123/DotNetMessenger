@@ -24,12 +24,16 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="2"/>
             <RowDefinition Height="Auto" MaxHeight="{Binding ElementName=SendMessageBox, Path=MaxHeight}"/>
         </Grid.RowDefinitions>
-        <controls:UserMetaBox x:Name="CurrentUserBox" Grid.Column="0" Grid.Row="0"/>
-        <TabControl Grid.Column="0" Grid.Row="1" Grid.RowSpan="3">
+        <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3">
+            <MenuItem Name="CreateGroupMenuItem" Header="_Создать группу" Click="CreateGroupMenuItem_OnClick"/>
+        </Menu>
+        <controls:UserMetaBox x:Name="CurrentUserBox" Grid.Column="0" Grid.Row="1"/>
+        <TabControl Grid.Column="0" Grid.Row="2" Grid.RowSpan="3">
             <TabItem Header="Пользователи">
                 <ListView x:Name="UsersListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single" 
                           SelectionChanged="UserPicker_SelectionChanged" />
@@ -43,12 +47,12 @@
                           SelectionChanged="HistoryPicker_SelectionChanged"/>
             </TabItem>
         </TabControl>
-        <DockPanel x:Name="ChatDockPanel" Grid.Row="0" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
+        <DockPanel x:Name="ChatDockPanel" Grid.Row="1" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
             <controls:MetaBox x:Name="CurrentChatBox" DockPanel.Dock="Left" Width="Auto" />
         </DockPanel>
-        <GridSplitter Grid.RowSpan="4"  Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" />
-        <ListView x:Name="MessagesListView" Grid.Row="1" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
-        <GridSplitter Grid.Row="2" Grid.Column="2" HorizontalAlignment="Stretch" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
-        <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="3" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        <GridSplitter Grid.RowSpan="4"  Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" />
+        <ListView x:Name="MessagesListView" Grid.Row="2" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        <GridSplitter Grid.Row="3" Grid.Column="2" HorizontalAlignment="Stretch" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="4" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
     </Grid>
 </Window>

@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Web.Script.Serialization;
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WPFClient.Classes;
 
 namespace DotNetMessenger.WPFClient
@@ -112,6 +113,22 @@ namespace DotNetMessenger.WPFClient
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadAsAsync<ChatUserInfo>();
+            }
+            return null;
+        }
+
+        public static async Task<Chat> CreateNewGroupChat(IEnumerable<int> users)
+        {
+            var userList = users as List<int> ?? users.ToList();
+            userList.Add(UserId);
+            var request = new HttpRequestMessage(HttpMethod.Post, "chats/");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{_token}:".ToBase64String());
+            var response = await Client
+                .SendAsJsonAsync(request, new ChatCredentials {ChatType = ChatTypes.GroupChat, Title = "ok", Members = userList})
+                .ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<Chat>();
             }
             return null;
         }
