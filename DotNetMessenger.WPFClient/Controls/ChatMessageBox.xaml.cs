@@ -1,18 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using DotNetMessenger.Model;
 
 namespace DotNetMessenger.WPFClient.Controls
@@ -66,7 +56,7 @@ namespace DotNetMessenger.WPFClient.Controls
                 typeof(ChatMessageBox)
             );
 
-        public ObservableCollection<byte[]> MessageAttachments { get; set; } = new ObservableCollection<byte[]>();
+        public ObservableCollection<AttachmentControl> MessageAttachments { get; set; } = new ObservableCollection<AttachmentControl>();
 
         private async void SetInfo()
         {
@@ -84,13 +74,26 @@ namespace DotNetMessenger.WPFClient.Controls
                 _message = value;
                 SetInfo();
                 MessageText = _message.Text;
-                MessageDateTime = _message.Date;
-                /* TODO: SHOW REGULAR FILES (AND ALLOW DOWNLOAD?) */
-                MessageAttachments.Clear();
-                if (_message.Attachments == null) return;
-                foreach (var images in _message.Attachments.Select(x => x.File))
+                if (!string.IsNullOrEmpty(_message.Text))
                 {
-                    MessageAttachments.Add(images);
+                    Grid.SetRow(AttachControl, 2);
+                    TextLabel.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    Grid.SetRow(AttachControl, 1);
+                    TextLabel.Visibility = Visibility.Collapsed;
+                }
+
+                MessageDateTime = _message.Date;
+
+
+                MessageAttachments.Clear();
+
+                if (_message.Attachments == null) return;
+                foreach (var file in _message.Attachments)
+                {
+                    MessageAttachments.Add(new AttachmentControl(file));
                 }
             }
         }
@@ -98,6 +101,7 @@ namespace DotNetMessenger.WPFClient.Controls
         public ChatMessageBox(Message message) : this()
         {
             ChatMessage = message;
+            AttachControl.ItemsSource = MessageAttachments;
         }
 
         public ChatMessageBox()

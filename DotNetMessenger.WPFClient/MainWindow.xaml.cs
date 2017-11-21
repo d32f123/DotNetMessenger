@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -130,9 +131,30 @@ namespace DotNetMessenger.WPFClient
             ChatsListView.ItemsSource = ChatsMetaBoxs;
             MessagesListView.ItemsSource = ChatMessagesBoxs;
 
+            RestClient.SubscribeForNewChats(chats?.LastOrDefault()?.Id ?? -1, NewChatsHandler);
+            RestClient.SubscribeForNewUsers(users?.LastOrDefault()?.Id ?? -1, NewUsersHandler);
+
             DisplayChatRegion = Visibility.Hidden;
+
+            new Thread(ExpiredMessagesDeleter).Start();
         }
 
+        private void ExpiredMessagesDeleter()
+        {
+            while (true)
+            {
+                if (ChatMessagesBoxs != null && ChatMessagesBoxs.Any())
+                {
+                    ChatMessagesBoxs
+                        .Where(x => x.ChatMessage.ExpirationDate != null &&
+                                    DateTime.Compare((DateTime) x.ChatMessage.ExpirationDate, DateTime.Now) < 0)
+                        .ToList().ForEach(x => Application.Current.Dispatcher.Invoke(() => ChatMessagesBoxs.Remove(x)));
+                }
+                Thread.Sleep(1000);
+            }
+        }
+
+        #region LongPollingHandlers
         private async void NewMessagesHandler(object sender, (int, List<Message>) valueTuple)
         {
             (var chatId, var messagesListView) = valueTuple;
@@ -148,24 +170,54 @@ namespace DotNetMessenger.WPFClient
                 // if no history yet
                 if (box == null)
                 {
-                    var isDialog = UsersListView.SelectedIndex != -1;
-                    var index = isDialog ? UsersListView.SelectedIndex : ChatsListView.SelectedIndex;
-                    box = isDialog
-                        ? new HistoryMetaBox(UsersMetaBoxs[index].DisplayedUser)
-                        : new HistoryMetaBox(ChatsMetaBoxs[index].DisplayedChat);
+                    box = new HistoryMetaBox(await RestClient.GetChatAsync(chatId));
                     box.InfoFetched += OnHistoryInfoFetched;
                     HistoryMetaBoxs.Add(box);
-                    return;
                 }
-                await box.UpdateInfo();
+                else
+                {
+                    await box.UpdateInfo();
+                }
             });
         }
+
+        private void NewChatsHandler(object sender, List<Chat> chats)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                chats.ForEach(async x => await AddChatAndSubscribe(x));
+            });
+        }
+
+        private void NewUsersHandler(object sender, List<User> users)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                users.ForEach(async x => await AddUserAndSubscribe(x));
+            });
+        }
+        #endregion
 
         private void SetCurrentChatBox(MetaBox newBox)
         {
             CurrentChatBox.MetaTitle = newBox.MetaTitle;
             CurrentChatBox.MetaImage = newBox.MetaImage;
             CurrentChatBox.MetaSecondaryInfo = newBox.MetaSecondaryInfo;
+        }
+
+        private async Task OnChatSelectionChanged(MetaBox metaBox,int chatId, bool isDialog)
+        {
+            SetCurrentChatBox(metaBox);
+            DisplayChatRegion = Visibility.Visible;
+
+            _currChat = chatId;
+
+            ChatMessagesBoxs.Clear();
+
+            var messages = await RestClient.GetChatMessagesAsync(chatId);
+            messages.ForEach(x => ChatMessagesBoxs.Add(new ChatMessageBox(x)));
+
+            await SendMessageBox.SetMessageBox(chatId, isDialog);
         }
 
         private async void UserPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -176,21 +228,8 @@ namespace DotNetMessenger.WPFClient
             HistoryListView.SelectedIndex = -1;
 
             var userBox = (UserMetaBox)e.AddedItems[0];
-
-            SetCurrentChatBox(userBox);
-            DisplayChatRegion = Visibility.Visible;
-
-            ChatMessagesBoxs.Clear();
-
             var chat = await RestClient.GetDialogChatAsync(userBox.DisplayedUser.Id);
-            _currChat = chat.Id;
-
-            var messages = await RestClient.GetChatMessagesAsync(chat.Id);
-
-            ChatMessagesBoxs.Clear();
-            messages.ForEach(x => ChatMessagesBoxs.Add(new ChatMessageBox(x)));
-
-            await SendMessageBox.SetMessageBox(chat.Id, true);
+            await OnChatSelectionChanged(userBox, chat.Id, true);
         }
 
         private async void ChatPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -201,18 +240,7 @@ namespace DotNetMessenger.WPFClient
             HistoryListView.SelectedIndex = -1;
 
             var chatBox = (ChatMetaBox) e.AddedItems[0];
-
-            SetCurrentChatBox(chatBox);
-            DisplayChatRegion = Visibility.Visible;
-
-            ChatMessagesBoxs.Clear();
-
-            var messages = await RestClient.GetChatMessagesAsync(chatBox.DisplayedChat.Id);
-            _currChat = chatBox.DisplayedChat.Id;
-
-            messages.ForEach(x => ChatMessagesBoxs.Add(new ChatMessageBox(x)));
-            
-            await SendMessageBox.SetMessageBox(chatBox.DisplayedChat.Id, false);
+            await OnChatSelectionChanged(chatBox, chatBox.DisplayedChat.Id, false);
         }
 
         private async void HistoryPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -223,22 +251,12 @@ namespace DotNetMessenger.WPFClient
             ChatsListView.SelectedIndex = -1;
 
             var historyBox = (HistoryMetaBox) e.AddedItems[0];
-
-            if (historyBox.DisplayedChat != null)
-                SetCurrentChatBox(new ChatMetaBox(historyBox.DisplayedChat));
-            else
-                SetCurrentChatBox(new UserMetaBox(historyBox.DisplayedUser));
-            DisplayChatRegion = Visibility.Visible;
-
-            ChatMessagesBoxs.Clear();
+            var box = historyBox.DisplayedChat != null
+                ? new ChatMetaBox(historyBox.DisplayedChat)
+                : (MetaBox)new UserMetaBox(historyBox.DisplayedUser);
 
             var chat = historyBox.DisplayedChat ?? await RestClient.GetDialogChatAsync(historyBox.DisplayedUser.Id);
-            var messages = await RestClient.GetChatMessagesAsync(chat.Id);
-            _currChat = chat.Id;
-
-            messages.ForEach(x => ChatMessagesBoxs.Add(new ChatMessageBox(x)));
-
-            await SendMessageBox.SetMessageBox(chat.Id, historyBox.DisplayedChat == null);
+            await OnChatSelectionChanged(box, chat.Id, historyBox.DisplayedChat == null);
         }
         #endregion
 
@@ -253,8 +271,8 @@ namespace DotNetMessenger.WPFClient
             newGroupWindow.ShowDialog();
             if (newGroupWindow.DialogResult != null && (bool)newGroupWindow.DialogResult)
             {
-                var chat = await RestClient.CreateNewGroupChat(newGroupWindow.SelectedUsers.Select(x => x.Id));
-                await AddChatAndSubscribe(chat);
+                await RestClient.CreateNewGroupChat(newGroupWindow.ChatName,
+                    newGroupWindow.SelectedUsers.Select(x => x.Id));
             }
         }
     }

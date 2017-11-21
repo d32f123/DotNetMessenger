@@ -69,11 +69,11 @@ namespace DotNetMessenger.WebApi.Controllers
                 {
                     timeLogger.Start();
                     var msg = RepositoryBuilder.MessagesRepository.StoreMessage(userId, chatId, message.Text,
-                        message.Attachments);
+                        message.Attachments?.Where(x => x != null));
                     NLogger.Logger.Info("Successfully stored message from UID:{0} to CID:{1}. Message: {2}",
                         userId, chatId, msg);
                     NLogger.Logger.Debug("Notifying subscribers about a new message");
-                    new ChatSubscriptions().InvokeFor(this, chatId);
+                    new ChatMessageSubscriptions().InvokeFor(this, chatId);
                     return msg;
                 }
             }
@@ -83,10 +83,10 @@ namespace DotNetMessenger.WebApi.Controllers
             {
                 timeLogger.Start();
                 var msg = RepositoryBuilder.MessagesRepository.StoreTemporaryMessage(userId, chatId, message.Text,
-                    (DateTime) message.ExpirationDate, message.Attachments);
+                    ((DateTime) message.ExpirationDate).ToLocalTime(), message.Attachments?.Where(x => x != null));
                 NLogger.Logger.Info("Successfully stored message with e.d from UID: {0} to CID:{1}. Message: {2}", userId, chatId, msg);
                 NLogger.Logger.Debug("Notifying subscribers about a new message");
-                new ChatSubscriptions().InvokeFor(this, chatId);
+                new ChatMessageSubscriptions().InvokeFor(this, chatId);
                 return msg;
             }
         }
@@ -199,9 +199,9 @@ namespace DotNetMessenger.WebApi.Controllers
         /// <param name="dateRange"><see cref="DateRange"/> object instance</param>
         /// <returns>Messages in <see cref="DateRange"/> range</returns>
         [Route("chats/{chatId:int}/bydate")]
-        [HttpGet]
+        [HttpPut]
         [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
-        public IEnumerable<Message> GetChatMessagesInRange(int chatId, [FromUri] DateRange dateRange)
+        public IEnumerable<Message> GetChatMessagesInRange(int chatId, [FromBody] DateRange dateRange)
         {
             NLogger.Logger.Debug("Called with arguments CID:{0}, Range:{1}", chatId, dateRange);
 

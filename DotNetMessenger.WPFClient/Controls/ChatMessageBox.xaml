@@ -8,7 +8,8 @@
     <UserControl.Resources>
         <local:DateTimeToDateStringConverter x:Key="DateTimeToDateStringConverter" />
     </UserControl.Resources>
-    <Grid>
+    <Border BorderBrush="Gainsboro" BorderThickness="1">
+    <Grid Margin="5">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
@@ -19,7 +20,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Image Grid.Column="0" Grid.RowSpan="2" Name="AvatarImage" Width="40" Height="40">
+        <Image Grid.Column="0" Grid.RowSpan="3" VerticalAlignment="Top" Name="AvatarImage" Width="40" Height="40">
             <Image.Source>
                 <Binding Path="SenderAvatar">
                     <Binding.TargetNullValue>
@@ -29,16 +30,16 @@
             </Image.Source>
         </Image>
         <Label Grid.Column="1" Grid.Row="0"  Content="{Binding Path=SenderName}"/>
-        <Label Grid.Column="1" Grid.Row="1" Content="{Binding Path=MessageText}"/>
-        <WrapPanel x:Name="AttachmentsPanel" Grid.Column="1" Grid.Row="2">
-            <ItemsControl ItemsSource="{Binding Path=MessageAttachments}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Image Source="{Binding}"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </WrapPanel>
-        <Label Grid.Column="2" Grid.Row="0" Content="{Binding Path=MessageDateTime, Converter={StaticResource DateTimeToDateStringConverter}}"/>
+        <Label Name="TextLabel" Grid.Column="1" Grid.Row="1" Content="{Binding Path=MessageText}"/>
+        <ItemsControl Grid.Column="1" Grid.ColumnSpan="2" Grid.Row="2" Name="AttachControl">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel IsItemsHost="True"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <Label Grid.Column="2" Grid.Row="0" Margin="0,0,0,0" HorizontalAlignment="Right" 
+               Content="{Binding Path=MessageDateTime, Converter={StaticResource DateTimeToDateStringConverter}}"/>
     </Grid>
+    </Border>
 </UserControl>

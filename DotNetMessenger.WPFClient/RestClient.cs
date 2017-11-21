@@ -24,8 +24,13 @@ namespace DotNetMessenger.WPFClient
         /// Thread in the tuple: long-polling thread for notifications
         /// EventHandler: list of delegates to call
         /// </summary>
-        private static readonly Dictionary<int, (Thread, bool)> NewChatMessageSubscriptions =
+        private static readonly Dictionary<int, (Thread, bool)> Subscriptions =
             new Dictionary<int, (Thread, bool)>();
+        private enum SubscriptionType : int
+        {
+            NewUser = -1,
+            NewGroup = -2
+        };
 
         public static int UserId { get; private set; } = -1;
 
@@ -84,9 +89,80 @@ namespace DotNetMessenger.WPFClient
             return null;
         }
 
+        public static void SubscribeForNewUsers(int lastUserId, EventHandler<List<User>> handler)
+        {
+            lock (Subscriptions)
+            {
+                if (Subscriptions.ContainsKey((int) SubscriptionType.NewUser))
+                    throw new ArgumentException("You are already subscribed");
+                var thread = new Thread(NewUserLongPoller);
+                Subscriptions.Add((int)SubscriptionType.NewUser, (thread, false));
+                thread.Start((lastUserId, handler));
+            }
+        }
+
+        public static void UnsubscribeFromNewUsers()
+        {
+            lock (Subscriptions)
+            {
+                if (!Subscriptions.ContainsKey((int)SubscriptionType.NewUser))
+                    return;
+                Subscriptions[(int)SubscriptionType.NewUser] =
+                    (Subscriptions[(int)SubscriptionType.NewUser].Item1, true);
+            }
+        }
+
+        // Tuple:
+        // 1) id of the last user
+        // 2) handler
+        private static async void NewUserLongPoller(object tuple)
+        {
+            bool shouldExit;
+            var client = new HttpClient { BaseAddress = new Uri(_connectionString) };
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            (var lastId, var handler) = ((int, EventHandler<List<User>>))tuple;
+            do
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, $"users/subscribe/{lastId}");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{_token}:".ToBase64String());
+                HttpResponseMessage response;
+                try
+                {
+                    response = await client.SendAsync(request).ConfigureAwait(false);
+                }
+                catch
+                {
+                    response = null;
+                }
+                if (response != null && response.IsSuccessStatusCode)
+                {
+                    var list = await response.Content.ReadAsAsync<List<User>>();
+                    lastId = list.Last().Id;
+                    handler?.Invoke(null, list);
+                }
+                lock (Subscriptions)
+                {
+                    shouldExit = Subscriptions[(int)SubscriptionType.NewUser].Item2;
+                }
+            } while (!shouldExit);
+        }
+
         #endregion
 
         #region Chats region
+
+        public static async Task<Chat> GetChatAsync(int chatId)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"chats/{chatId}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{_token}:".ToBase64String());
+            var response = await Client.SendAsync(request).ConfigureAwait(false);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadAsAsync<Chat>();
+            }
+            return null;
+        }
 
         public static async Task<Chat> GetDialogChatAsync(int otherId)
         {
@@ -117,14 +193,14 @@ namespace DotNetMessenger.WPFClient
             return null;
         }
 
-        public static async Task<Chat> CreateNewGroupChat(IEnumerable<int> users)
+        public static async Task<Chat> CreateNewGroupChat(string chatName, IEnumerable<int> users)
         {
             var userList = users as List<int> ?? users.ToList();
             userList.Add(UserId);
             var request = new HttpRequestMessage(HttpMethod.Post, "chats/");
             request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{_token}:".ToBase64String());
             var response = await Client
-                .SendAsJsonAsync(request, new ChatCredentials {ChatType = ChatTypes.GroupChat, Title = "ok", Members = userList})
+                .SendAsJsonAsync(request, new ChatCredentials {ChatType = ChatTypes.GroupChat, Title = chatName, Members = userList})
                 .ConfigureAwait(false);
             if (response.IsSuccessStatusCode)
             {
@@ -135,24 +211,83 @@ namespace DotNetMessenger.WPFClient
 
         public static void SubscribeForNewMesages(int chatId, int lastMessageId, EventHandler<(int, List<Message>)> newMessagesHandler)
         {
-            lock (NewChatMessageSubscriptions)
+            lock (Subscriptions)
             {
-                if (NewChatMessageSubscriptions.ContainsKey(chatId))
+                if (Subscriptions.ContainsKey(chatId))
                     throw new ArgumentException("You are already subscribed");
                 var thread = new Thread(LongPollingThread);
-                NewChatMessageSubscriptions.Add(chatId, (thread, false));
+                Subscriptions.Add(chatId, (thread, false));
                 thread.Start((chatId, lastMessageId, newMessagesHandler));
             }
         }
 
         public static void UnsubscribeFromNewMessages(int chatId)
         {
-            lock (NewChatMessageSubscriptions)
+            lock (Subscriptions)
             {
-                if (!NewChatMessageSubscriptions.ContainsKey(chatId))
+                if (!Subscriptions.ContainsKey(chatId))
                     return;
-                NewChatMessageSubscriptions[chatId] = (NewChatMessageSubscriptions[chatId].Item1, true);
+                Subscriptions[chatId] = (Subscriptions[chatId].Item1, true);
             }
+        }
+
+        public static void SubscribeForNewChats(int lastChatId, EventHandler<List<Chat>> newChatsHandler)
+        {
+            lock (Subscriptions)
+            {
+                if (Subscriptions.ContainsKey((int) SubscriptionType.NewGroup))
+                    throw new ArgumentException("You are already subscribed for new chats");
+                var thread = new Thread(NewChatLongPoller);
+                Subscriptions.Add((int) SubscriptionType.NewGroup, (thread, false));
+                thread.Start((lastChatId, newChatsHandler));
+            }
+        }
+
+        public static void UnsubscribeFromNewChats()
+        {
+            lock (Subscriptions)
+            {
+                if (!Subscriptions.ContainsKey((int) SubscriptionType.NewGroup))
+                    return;
+                Subscriptions[(int) SubscriptionType.NewGroup] =
+                    (Subscriptions[(int) SubscriptionType.NewGroup].Item1, true);
+            }
+        }
+
+        // Tuple:
+        // 1) id of the last chat
+        // 2) handler
+        private static async void NewChatLongPoller(object tuple)
+        {
+            bool shouldExit;
+            HttpClient client = new HttpClient { BaseAddress = new Uri(_connectionString) };
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            (var lastId, var handler) = ((int, EventHandler<List<Chat>>))tuple;
+            do
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, $"chats/subscribe/{lastId}");
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", $"{_token}:".ToBase64String());
+                HttpResponseMessage response;
+                try
+                {
+                    response = await client.SendAsync(request).ConfigureAwait(false);
+                }
+                catch
+                {
+                    response = null;
+                }
+                if (response != null && response.IsSuccessStatusCode)
+                {
+                    var list = await response.Content.ReadAsAsync<List<Chat>>();
+                    lastId = list.Last().Id;
+                    handler?.Invoke(null, list);
+                }
+                lock (Subscriptions)
+                {
+                    shouldExit = Subscriptions[(int)SubscriptionType.NewGroup].Item2;
+                }
+            } while (!shouldExit);
         }
 
         private static async void LongPollingThread(object chatAndMessageAndHandlerTuple)
@@ -184,9 +319,9 @@ namespace DotNetMessenger.WPFClient
                     lastMessageId = messages.Last().Id;
                     newMessagesHandler?.Invoke(null, (chatId, messages));
                 }
-                lock (NewChatMessageSubscriptions)
+                lock (Subscriptions)
                 {
-                    shouldExit = NewChatMessageSubscriptions[chatId].Item2;
+                    shouldExit = Subscriptions[chatId].Item2;
                 }
             } while (!shouldExit);
         }

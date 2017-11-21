@@ -24,14 +24,15 @@ namespace DotNetMessenger.WebApi.Extensions
         public static bool ComparePasswordToHash(string password, string storedHash)
         {
             var hashBytes = Convert.FromBase64String(storedHash);
-
+            var hashPass = new byte[20];
             var salt = new byte[16];
             Array.Copy(hashBytes, 0, salt, 0, 16);
+            Array.Copy(hashBytes, 16, hashPass, 0, 20);
 
             var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 10000);
             var hash = pbkdf2.GetBytes(20);
 
-            return hash.SequenceEqual(hashBytes);
+            return hash.SequenceEqual(hashPass);
         }
     }
 }

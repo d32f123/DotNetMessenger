@@ -28,7 +28,7 @@
 	[RegisterDate]	DATETIME
 		CONSTRAINT	[DF_RegisterDate] DEFAULT GETDATE(),
 	CONSTRAINT		[PK_Users] PRIMARY KEY([ID]),
-	CONSTRAINT		[CK_Users_Username] CHECK(LEN([Username]) >= 6)
+	CONSTRAINT		[CK_Users_Username] CHECK(LEN([Username]) >= 4)
 	);
 	-- INSERT DELETED USER
 INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a deleted user
@@ -70,6 +70,7 @@ INSERT INTO [Users] ([Username], [Password]) VALUES ('deleted', 'x'); -- a delet
 	CONSTRAINT		[FK_ChatsChatTypes] FOREIGN KEY ([ChatType]) REFERENCES [ChatTypes]([ID])
  );
  CREATE INDEX [IX_Chats_CreatorID] ON [Chats]([CreatorID]);
+ CREATE INDEX [IX_Chats_ChatType] ON [Chats]([ChatType]);
 
 	-- ChatInfos table
  CREATE TABLE [ChatInfos](
@@ -170,6 +171,7 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
 	-- Attachments table
  CREATE TABLE [Attachments](
 	[ID]			INT IDENTITY(0, 1),
+	[FileName]		VARCHAR(60) NOT NULL,
 	[Type]			INT NOT NULL		-- 0 - image, 1 -- regular file
 		CONSTRAINT DF_Type DEFAULT 0,
 	[AttachFile]	VARBINARY(MAX) NOT NULL,
@@ -179,6 +181,7 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
 	CONSTRAINT		[FK_AttachmentsAttachmentTypes] FOREIGN KEY ([Type]) REFERENCES [AttachmentTypes]([ID]) ON DELETE SET DEFAULT
  );
  CREATE INDEX [IX_Attachments_MessageID] ON [Attachments]([MessageID]);
+ CREATE INDEX [IX_Attachments_Type] ON [Attachments]([Type]);
 
  	-- a table that keeps various access tokens
  CREATE TABLE [Tokens] (
@@ -191,6 +194,7 @@ INSERT INTO [AttachmentTypes] VALUES ('Regular file'), ('Image');
 	CONSTRAINT		[PK_Tokens] PRIMARY KEY ([Token]),
 	CONSTRAINT		[FK_TokensUsers] FOREIGN KEY ([UserID]) REFERENCES [Users]([ID]) ON DELETE CASCADE
  );
+ CREATE INDEX [IX_Tokens_UserID] ON [Tokens]([UserID]);
 GO
 	-- create a stored procedure to clear bad tokens
  CREATE OR ALTER PROCEDURE [DeleteExpiredTokens] AS
@@ -345,3 +349,29 @@ BEGIN
 	THROW 50000, 'INSERT Message sender cannot be 0', 1
 END
 GO
+
+-- functions
+--DROP TYPE IF EXISTS IDListType;
+--CREATE TYPE IDListType AS TABLE (
+--	ID	INT UNIQUE
+--	);
+
+ DROP PROCEDURE [AddUsersToChat];
+ GO
+
+ CREATE OR ALTER PROCEDURE [AddUsersToChat] 
+	@IDList IdListType READONLY, 
+	@ChatID INT  
+	AS
+ INSERT INTO [ChatUsers] ([UserID], [ChatID])
+	SELECT [a].[ID], @ChatID FROM @IDList AS a;
+
+ DROP PROCEDURE [KickUsersFromChat];
+ GO
+ 
+ CREATE OR ALTER PROCEDURE [KickUsersFromChat] 
+	@IDList IdListType READONLY, 
+	@ChatID INT  
+	AS
+ DELETE FROM [ChatUsers] WHERE [ChatUsers].[UserID] IN 
+	(SELECT [a].[ID] FROM @IDList AS a) AND [ChatUsers].[ChatID] = @ChatID;

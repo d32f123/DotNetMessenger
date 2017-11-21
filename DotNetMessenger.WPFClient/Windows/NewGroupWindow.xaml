@@ -10,11 +10,16 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Label Content="Выбери пользователей:" Grid.Row="0"/>
-        <ListView Grid.Row="1" ItemContainerStyle="{StaticResource TransparentSelectionStyle}" ItemsSource="{Binding Path=Users}">
+        <DockPanel>
+            <Label Content="Имя чата:"/>
+            <TextBox Text="{Binding Path=ChatName, Mode=TwoWay}" VerticalContentAlignment="Center"/>
+        </DockPanel>
+        <Label Content="Выбери пользователей:" Grid.Row="1"/>
+        <ListView Grid.Row="2" ItemContainerStyle="{StaticResource TransparentSelectionStyle}" ItemsSource="{Binding Path=Users}">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <WrapPanel>
@@ -24,7 +29,7 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-        <DockPanel Grid.Row="2">
+        <DockPanel Grid.Row="3">
             <Button Name="CreateButton" DockPanel.Dock="Left" Width="150" Content="Создать" IsDefault="True" Click="CreateButton_Click"/>
             <Button Name="ExitButton" DockPanel.Dock="Right" Content="Выйти"  Margin="20, 0, 0, 0" Click="ExitButton_Click"/>
         </DockPanel>

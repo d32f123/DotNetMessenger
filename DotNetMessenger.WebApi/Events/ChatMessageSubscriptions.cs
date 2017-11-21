@@ -4,7 +4,7 @@ using DotNetMessenger.Logger;
 
 namespace DotNetMessenger.WebApi.Events
 {
-    public class ChatSubscriptions : ISubscribable
+    public class ChatMessageSubscriptions : ISubscribable
     {
         private static readonly Dictionary<int, EventHandler> NewMessageEvents = new Dictionary<int, EventHandler>();
 
@@ -17,7 +17,7 @@ namespace DotNetMessenger.WebApi.Events
                     NewMessageEvents[chatId]?.Invoke(sender, null);
                 }
             }
-            NLogger.Logger.Debug("ChatSubscribtion notified for {0}", chatId);
+            NLogger.Logger.Debug("ChatMessageSubscription notified for {0}", chatId);
         }
 
         public void SubscribeTo(int chatId, EventHandler handler)
@@ -33,7 +33,7 @@ namespace DotNetMessenger.WebApi.Events
                     NewMessageEvents[chatId] += handler;
                 }
             }
-            NLogger.Logger.Debug("ChatSubscription added for {0}.", chatId);
+            NLogger.Logger.Debug("ChatMessageSubscription added for {0}.", chatId);
         }
 
         public void UnsubscribeFrom(int entityId, EventHandler handler)
@@ -44,7 +44,7 @@ namespace DotNetMessenger.WebApi.Events
                     return;
                 NewMessageEvents[entityId] -= handler;
             }
-            NLogger.Logger.Debug("ChatSubscription removed for {0}.", entityId);
+            NLogger.Logger.Debug("ChatMessageSubscription removed for {0}.", entityId);
         }
     }
 }

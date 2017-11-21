@@ -34,6 +34,7 @@ namespace DotNetMessenger.WPFClient.Windows
             }
         }
         public ObservableCollection<UserWithCheckBox> Users { get; set; } = new ObservableCollection<UserWithCheckBox>();
+        public string ChatName { get; set; }
 
         public IEnumerable<User> SelectedUsers => Users.Where(x => x.IsChecked).Select(x => x.UserBox.DisplayedUser);
 

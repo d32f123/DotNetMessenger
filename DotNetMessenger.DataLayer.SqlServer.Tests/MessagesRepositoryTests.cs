@@ -86,7 +86,8 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var attachment = new Attachment
             {
                 File = Encoding.UTF8.GetBytes("hey i am an attachment"),
-                Type = AttachmentTypes.RegularFile
+                Type = AttachmentTypes.RegularFile,
+                FileName = "asd"
             };
             // act
             _messagesRepository.StoreMessage(_userId, _chatId, text, new[] {attachment});
@@ -111,6 +112,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.Tests
             var attachment = new Attachment
             {
                 File = Encoding.UTF8.GetBytes("hey i am an attachment"),
+                FileName = "somefile",
                 Type = AttachmentTypes.RegularFile
             };
             // act

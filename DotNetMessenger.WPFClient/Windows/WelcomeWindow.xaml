@@ -5,10 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DotNetMessenger.WPFClient.Windows"
         mc:Ignorable="d"
-        Title="Добро пожаловать" Height="139.102" Width="207.052">
-    <Grid>
+        Title="Добро пожаловать" Width="207.052">
+    <StackPanel>
         <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top"><Run Text="Войдите или зарегистрируйтесь, чтобы "/><Run Text="продолжить"/></TextBlock>
-        <Button Content="Я уже был здесь" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="10,47,10,10" Name="LoginButton" Click="LoginButton_Click"/>
-        <Button Content="Я здесь впервые" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="10,72,10,0" Name="RegisterButton" Click="RegisterButton_Click"/>
-    </Grid>
+        <Button Content="Я уже был здесь" HorizontalAlignment="Stretch" Margin="10,5,10,5" Name="LoginButton" Click="LoginButton_Click"/>
+        <Button Content="Я здесь впервые" HorizontalAlignment="Stretch" Margin="10,0,10,0" Name="RegisterButton" Click="RegisterButton_Click"/>
+    </StackPanel>
 </Window>

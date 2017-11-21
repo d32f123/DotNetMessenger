@@ -18,22 +18,12 @@ namespace DotNetMessenger.DataLayer.SqlServer
         {
             _connectionString = connectionString;
         }
-        /// <inheritdoc />
-        /// <summary>
-        /// Stores a <see cref="T:DotNetMessenger.Model.Message" /> by <paramref name="senderId" /> in <paramref name="chatId" />
-        /// </summary>
-        /// <param name="senderId">The id of the sender</param>
-        /// <param name="chatId">Chat id</param>
-        /// <param name="text">Text of the message</param>
-        /// <param name="attachments">Any attachments</param>
-        /// <returns><see cref="T:DotNetMessenger.Model.Message" /> object representing persisted message</returns>
-        /// <exception cref="ArgumentNullException">Throws if text and attachments are both null</exception>
-        /// <exception cref="ArgumentException">
-        ///     Throws if any of the ids are invalid or if 
-        ///     <paramref name="senderId"/> is not in <paramref name="chatId"/>
-        /// </exception>
-        public Message StoreMessage(int senderId, int chatId, string text, IEnumerable<Attachment> attachments = null)
+
+        private Message StoreMessageUniversal(int senderId, int chatId, string text,
+            IEnumerable<Attachment> attachments = null, DateTime? expirationDate = null)
         {
+            if (expirationDate != null && DateTime.Compare((DateTime)expirationDate, DateTime.Now) <= 0)
+                return null;
             if (string.IsNullOrEmpty(text) && attachments == null)
                 throw new ArgumentNullException();
             if (senderId == 0)
@@ -45,21 +35,22 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     connection.Open();
 
                     // Insert the message
-                    var message = new MessageSqlProxy {ChatId = chatId, SenderId = senderId, Text = text};
+                    var message = new MessageSqlProxy { ChatId = chatId, SenderId = senderId, Text = text };
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = "DECLARE @T TABLE (ID INT, MessageDate DATETIME)\n" +
-                                                "INSERT INTO [Messages] ([ChatID], [SenderID], [MessageText]) " +
-                                                "OUTPUT INSERTED.[ID], INSERTED.[MessageDate] INTO @T " +
-                                                "VALUES (@chatId, @senderId, @messageText)\n" +
-                                                "SELECT [ID], [MessageDate] FROM @T";
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = "Store_Message";
 
                         command.Parameters.AddWithValue("@chatId", chatId);
                         command.Parameters.AddWithValue("@senderId", senderId);
                         if (text == null)
-                            command.Parameters.AddWithValue("@messageText", DBNull.Value);
+                            command.Parameters.AddWithValue("@text", DBNull.Value);
                         else
-                            command.Parameters.AddWithValue("@messageText", text);
+                            command.Parameters.AddWithValue("@text", text);
+                        if (expirationDate == null)
+                            command.Parameters.AddWithValue("@expirationDate", DBNull.Value);
+                        else
+                            command.Parameters.AddWithValue("@expirationDate", (DateTime)expirationDate);
 
                         try
                         {
@@ -89,25 +80,44 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             using (var command = connection.CreateCommand())
                             {
                                 command.CommandText =
-                                    "INSERT INTO [Attachments] ([Type], [AttachFile], [MessageID]) " +
+                                    "INSERT INTO [Attachments] ([FileName], [Type], [AttachFile], [MessageID]) " +
                                     "OUTPUT INSERTED.[ID] " +
-                                    "VALUES (@type, @attachFile, @messageId)";
+                                    "VALUES (@fileName, @type, @attachFile, @messageId)";
 
-                                command.Parameters.AddWithValue("@type", (int) attachment.Type);
+                                command.Parameters.AddWithValue("@type", (int)attachment.Type);
                                 command.Parameters.AddWithValue("@messageId", message.Id);
+                                command.Parameters.AddWithValue("@fileName", attachment.FileName);
                                 var attachFile =
                                     new SqlParameter("@attachFile", SqlDbType.VarBinary, attachment.File.Length)
-                                        {Value = attachment.File};
+                                    { Value = attachment.File };
                                 command.Parameters.Add(attachFile);
 
-                                attachment.Id = (int) command.ExecuteScalar();
-                                NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (Type:{1}, MessageID:{2}, AttachFile:{3})", "[Attachments]", attachment.Type, message.Id, attachment.File);
+                                attachment.Id = (int)command.ExecuteScalar();
+                                NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (FileName: {1}, Type:{2}, MessageID:{3}, AttachFile:{4})", "[Attachments]", attachment.FileName, attachment.Type, message.Id, attachment.File);
                             }
                     }
                     scope.Complete();
                     return message;
                 }
             }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Stores a <see cref="T:DotNetMessenger.Model.Message" /> by <paramref name="senderId" /> in <paramref name="chatId" />
+        /// </summary>
+        /// <param name="senderId">The id of the sender</param>
+        /// <param name="chatId">Chat id</param>
+        /// <param name="text">Text of the message</param>
+        /// <param name="attachments">Any attachments</param>
+        /// <returns><see cref="T:DotNetMessenger.Model.Message" /> object representing persisted message</returns>
+        /// <exception cref="ArgumentNullException">Throws if text and attachments are both null</exception>
+        /// <exception cref="ArgumentException">
+        ///     Throws if any of the ids are invalid or if 
+        ///     <paramref name="senderId"/> is not in <paramref name="chatId"/>
+        /// </exception>
+        public Message StoreMessage(int senderId, int chatId, string text, IEnumerable<Attachment> attachments = null)
+        {
+            return StoreMessageUniversal(senderId, chatId, text, attachments);
         }
         /// <inheritdoc />
         /// <summary>
@@ -128,33 +138,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
         public Message StoreTemporaryMessage(int senderId, int chatId, string text, DateTime expirationDate,
             IEnumerable<Attachment> attachments = null)
         {
-            // if message already expired
-            if (expirationDate <= DateTime.Now)
-                return null;
-            using (var scope = new TransactionScope())
-            {
-                using (var connection = new SqlConnection(_connectionString))
-                {
-                    connection.Open();
-                    var message = (MessageSqlProxy)StoreMessage(senderId, chatId, text, attachments);
-                    // Insert expiration date into queue
-                    using (var command = connection.CreateCommand())
-                    {
-                        command.CommandText = "INSERT INTO [MessagesDeleteQueue] ([MessageID], [ExpireDate])" +
-                                              "VALUES (@messageId, @expireDate)";
-
-                        command.Parameters.AddWithValue("@messageId", message.Id);
-                        command.Parameters.AddWithValue("@expireDate", expirationDate);
-
-                        command.ExecuteNonQuery();
-                        NLogger.Logger.Trace("DB:Inserted:{0}:VALUES (MessageID:{1}, ExpireDate:{2})", "[MessageDeleteQueue]", message.Id, expirationDate);
-
-                    }
-
-                    scope.Complete();
-                    return message;
-                }
-            }
+            return StoreMessageUniversal(senderId, chatId, text, attachments, expirationDate);
         }
         /// <inheritdoc />
         /// <summary>
@@ -209,7 +193,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     throw new ArgumentException();
                 using (var command = connection.CreateCommand())
                 {
-                    command.CommandText = "SELECT [ID], [Type], [AttachFile] FROM [Attachments] " +
+                    command.CommandText = "SELECT [ID], [FileName], [Type], [AttachFile] FROM [Attachments] " +
                                           "WHERE [MessageID] = @messageId";
 
                     command.Parameters.AddWithValue("@messageId", messageId);
@@ -223,6 +207,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             yield return new Attachment
                             { 
                                 Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                FileName = reader.GetString(reader.GetOrdinal("FileName")),
                                 Type = (AttachmentTypes) reader.GetInt32(reader.GetOrdinal("Type")),
                                 File = reader[reader.GetOrdinal("AttachFile")] as byte[]
                             };

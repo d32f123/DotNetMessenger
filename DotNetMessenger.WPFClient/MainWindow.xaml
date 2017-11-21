@@ -47,11 +47,20 @@
                           SelectionChanged="HistoryPicker_SelectionChanged"/>
             </TabItem>
         </TabControl>
-        <DockPanel x:Name="ChatDockPanel" Grid.Row="1" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
-            <controls:MetaBox x:Name="CurrentChatBox" DockPanel.Dock="Left" Width="Auto" />
-        </DockPanel>
+        <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1"
+                Grid.Row="1" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
+            <controls:MetaBox x:Name="CurrentChatBox" />
+        </Border>
         <GridSplitter Grid.RowSpan="4"  Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" />
-        <ListView x:Name="MessagesListView" Grid.Row="2" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="2" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
+            <ItemsControl x:Name="MessagesListView" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Vertical" IsItemsHost="True"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </ScrollViewer>
         <GridSplitter Grid.Row="3" Grid.Column="2" HorizontalAlignment="Stretch" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
         <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="4" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
     </Grid>

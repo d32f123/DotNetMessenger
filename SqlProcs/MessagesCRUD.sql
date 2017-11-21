@@ -1,5 +1,7 @@
+DROP PROCEDURE Store_Message_WithAttachments;
 DROP TYPE IF EXISTS [AttachmentsListType];
 CREATE TYPE [AttachmentsListType] AS TABLE(
+	[FileName]		VARCHAR(60) NOT NULL,
 	[Attachment] VARBINARY(MAX),
 	[Type]		INT
 );
@@ -11,17 +13,19 @@ CREATE OR ALTER PROCEDURE Store_Message
 	@text		VARCHAR(MAX),
 	@expirationDate DATETIME NULL
 AS
-DECLARE @messageId INT
+DECLARE @messageId INT;
+DECLARE	@OutputTbl TABLE (ID INT, MessageDate DATETIME);
 	-- store message
 	BEGIN TRY
-	INSERT [Messages] ([ChatID], [SenderID], [MessageText])
+	INSERT [Messages] ([ChatID], [SenderID], [MessageText]) OUTPUT INSERTED.[ID], INSERTED.[MessageDate] INTO @OutputTbl
 	VALUES (@chatId, @senderId, @text);
 	SET @messageId = @@IDENTITY;
 	-- store expiration date if needed
 	IF @expirationDate IS NOT NULL
 		INSERT [MessagesDeleteQueue] ([ExpireDate], [MessageID])
 		VALUES (@expirationDate, @messageId);
-	SELECT @messageId ID;
+
+	SELECT * FROM @OutputTbl;
 	END TRY
 	BEGIN CATCH
 		THROW;
@@ -41,10 +45,10 @@ DECLARE @messageId INT
 	-- store message
 	EXECUTE @messageId = Store_Message @senderId, @chatId, @text, @expirationDate
 	-- store attachments
-	INSERT [Attachments] ([MessageID], [Type], [AttachFile]) 
-	SELECT a.[ID], b.[Type], b.[Attachment] FROM 
+	INSERT [Attachments] ([MessageID], [FileName], [Type], [AttachFile]) 
+	SELECT a.[ID], b.[FileName], b.[Type], b.[Attachment] FROM 
 		(SELECT @messageId ID) a 
-		CROSS JOIN (SELECT att.[Attachment], att.[Type] FROM @attachments att) b;
+		CROSS JOIN (SELECT att.[FileName], att.[Attachment], att.[Type] FROM @attachments att) b;
 	
 	SELECT @messageId ID;
 	RETURN;
@@ -84,7 +88,7 @@ CREATE OR ALTER PROCEDURE Get_Message_Attachments
 AS
 	IF NOT EXISTS (SELECT * FROM [Messages] WHERE [ID] = @messageId)
 		THROW 50000, 'id is invalid', 1
-	SELECT a.[ID], a.[AttachFile], [at].[FileFormat] FROM [Attachments] a, [AttachmentTypes] [at]
+	SELECT a.[ID], a.[AttachFile], a.[FileName], [at].[FileFormat] FROM [Attachments] a, [AttachmentTypes] [at]
 	WHERE a.[Type] = [at].[ID];
 GO
 

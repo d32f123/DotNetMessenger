@@ -13,7 +13,10 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Drawing;
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
+using Image = System.Drawing.Image;
 
 namespace DotNetMessenger.WPFClient.Controls
 {
@@ -32,7 +35,7 @@ namespace DotNetMessenger.WPFClient.Controls
         public static readonly DependencyProperty MessageTextProperty =
             DependencyProperty.Register(
                 nameof(MessageText), typeof(string),
-                typeof(MainWindow)
+                typeof(SendMessageBox)
             );
 
         public int MessageExpiration
@@ -43,9 +46,10 @@ namespace DotNetMessenger.WPFClient.Controls
         public static readonly DependencyProperty MessageExpirationProperty =
             DependencyProperty.Register(
                 nameof(MessageExpiration), typeof(int),
-                typeof(MainWindow));
+                typeof(SendMessageBox));
 
-        public ObservableCollection<Attachment> MessageAttachments { get; set; } = new ObservableCollection<Attachment>();
+
+        public Attachment MessageAttachment { get; set; }
 
         public async Task SetMessageBox(int chatId, bool isDialog)
         {
@@ -83,12 +87,80 @@ namespace DotNetMessenger.WPFClient.Controls
                 Text = MessageText,
                 Date = DateTime.Now,
                 ExpirationDate = MessageExpiration == 0 ? null : (DateTime?) DateTime.Now.AddSeconds(MessageExpiration),
-                Attachments = MessageAttachments
+                Attachments = MessageAttachment != null ? new List<Attachment> { MessageAttachment } : null
             };
             await RestClient.SendMessageAsync(_chatId, message);
             MessagePosted?.Invoke(this, message);
         }
 
         public event EventHandler<Message> MessagePosted;
+
+        private void AttachButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var button = (Button)sender;
+            if (MessageAttachment != null)
+            {
+                button.Content = "Attach";
+                MessageAttachment = null;
+            }
+            else
+            {
+                var filename = "";
+                if (!GetImageFromDialog(ref filename)) return;
+                var length = new System.IO.FileInfo(filename).Length;
+                var shortFileName = new System.IO.FileInfo(filename).Name;
+                // if length > 30 MB = 30 MB * 1024 kb/mb * 1024 b/kb
+                if (length > 30 * 1024 * 1024)
+                {
+                    MessageBox.Show("This file is way too large! Please something up to 30 mb only", "File too big",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+                // Now load the file
+                var isImage = true;
+                System.Drawing.Image image;
+                try
+                {
+                    image = Image.FromFile(filename);
+                }
+                catch
+                {
+                    // not an image for sure!
+                    isImage = false;
+                    image = null;
+                }
+                if (isImage)
+                {
+                    MessageAttachment = new Attachment {Type = AttachmentTypes.Image, File = image.ToBytes(), FileName = shortFileName};
+                }
+                else
+                {
+                    MessageAttachment = new Attachment
+                    {
+                        Type = AttachmentTypes.RegularFile,
+                        FileName = shortFileName,
+                        File = System.IO.File.ReadAllBytes(filename)
+                    };
+                }
+                button.Content = "Unattach";
+            }
+        }
+
+        private static bool GetImageFromDialog(ref string filename)
+        {
+            // Create OpenFileDialog 
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                DefaultExt = ".*",
+                Filter = "Any files (*.*)|*.*"
+            };
+
+            // Display OpenFileDialog by calling ShowDialog method 
+            var result = dlg.ShowDialog();
+
+            if (result != true) return false;
+            filename = dlg.FileName;
+            return true;
+        }
     }
 }

@@ -23,7 +23,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             {
                 var user = await RepositoryBuilder.UsersRepository.GetUserByUsernameAsync(userName);
                 var storedPassword = RepositoryBuilder.UsersRepository.GetPassword(user.Id);
-                return PasswordHasher.ComparePasswordToHash(password, storedPassword) ? null : new UserPrincipal(user.Id, userName, Guid.Empty);
+                return PasswordHasher.ComparePasswordToHash(password, storedPassword) ? new UserPrincipal(user.Id, userName, Guid.Empty) : null;
             }
             catch (ArgumentException)
             {

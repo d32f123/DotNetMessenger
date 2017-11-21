@@ -257,8 +257,6 @@ AS
 		THROW 50000, 'id is invalid', 1;
 GO
 
---TODO: ChatSpecificInfo, Role
-
 DECLARE @idlist IDListType;
 INSERT @idlist ([ID]) VALUES (17), (19), (20);
 EXECUTE Create_Chat @idlist, 'nice', 1;
@@ -288,10 +286,3 @@ EXECUTE Set_ChatSpecific_UserInfo 2, 1, 'hey asd', 3;
 EXECUTE Get_ChatSpecific_UserInfo 2, 1;
 
 EXECUTE Clear_ChatSpecific_UserInfo 2, 1;
-
-DELETE [ChatUserInfos] WHERE [ChatID] = 1 AND [UserID] = 1
-
-SELECT c.[ID] FROM [Chats] c, [ChatUsers] cu
-		WHERE c.[ChatType] = 0 AND cu.[ChatID] = c.[ID] AND (SELECT COUNT(*) FROM [ChatUsers] WHERE cu.ChatID = c.[ID]) = 1
-			AND (c.[CreatorID] = @user1 AND cu.[UserID] = @user2
-				OR  c.[CreatorID] = @user2 AND cu.[UserID] = @user1)

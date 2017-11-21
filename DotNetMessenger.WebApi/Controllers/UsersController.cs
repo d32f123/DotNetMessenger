@@ -6,6 +6,7 @@ using System.Web.Http;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.Logger;
+using DotNetMessenger.WebApi.Events;
 using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
@@ -267,6 +268,41 @@ namespace DotNetMessenger.WebApi.Controllers
             var hash = PasswordHasher.PasswordToHash(newPassword);
             RepositoryBuilder.UsersRepository.SetPassword(id, hash);
             NLogger.Logger.Info("Successfully set password for UID: {0}", id);
+        }
+        [Route("subscribe/{lastUserId:int}")]
+        [HttpGet]
+        public List<User> SubscribeForNewChats(int lastUserId)
+        {
+            User lastUser;
+            NLogger.Logger.Debug("Called with arguments: {0}", lastUserId);
+            try
+            {
+                NLogger.Logger.Debug("Fetching current chat");
+                lastUser = lastUserId >= 0
+                    ? RepositoryBuilder.UsersRepository.GetUser(lastUserId)
+                    : null;
+            }
+            catch
+            {
+                NLogger.Logger.Debug("Invalid ID provided. Will subscribe to any new chat");
+                lastUser = null;
+            }
+
+            // check for already existing new chats
+            if (lastUser != null)
+            {
+                var users = RepositoryBuilder.UsersRepository.GetAllUsers().ToList();
+                if (users.Any(x => x.Id > lastUserId))
+                    return users.Where(x => x.Id > lastUserId).ToList();
+            }
+            NLogger.Logger.Debug("Creating a poller to subscribe for new users");
+            var poller = new SinglePoller(new NewUserSubscription(), -1);
+            while (!poller.SubscriptionInvoked)
+                Thread.Sleep(500);
+            NLogger.Logger.Debug("New user registered. Returning user to subscriber");
+            return lastUser == null
+                ? RepositoryBuilder.UsersRepository.GetAllUsers().ToList()
+                : RepositoryBuilder.UsersRepository.GetAllUsers().Where(x => x.Id > lastUserId).ToList();
         }
     }
 }

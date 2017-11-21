@@ -103,7 +103,9 @@
     <Compile Include="Controllers\MessagesController.cs" />
     <Compile Include="Controllers\TokensController.cs" />
     <Compile Include="Controllers\UsersController.cs" />
+    <Compile Include="Events\ChatSubscription.cs" />
     <Compile Include="Events\ISubscribable.cs" />
+    <Compile Include="Events\NewUserSubscription.cs" />
     <Compile Include="Extensions\PasswordHasher.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\HttpAuthenticationChallengeContextExtensions.cs" />
@@ -128,7 +130,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Results\AddChallengeOnUnauthorizedResult.cs" />
     <Compile Include="Results\AuthenticationFailureResult.cs" />
-    <Compile Include="Events\ChatSubscriptions.cs" />
+    <Compile Include="Events\ChatMessageSubscriptions.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
