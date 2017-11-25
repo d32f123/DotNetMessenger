@@ -93,5 +93,16 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Converters\" />
+    <Folder Include="Extensions\" />
+    <Folder Include="Resources\" />
+    <Folder Include="Router\" />
+    <Folder Include="Validation\" />
+    <Folder Include="ViewModels\Auth\" />
+    <Folder Include="ViewModels\Entities\" />
+    <Folder Include="Views\" />
+    <Folder Include="Windows\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
