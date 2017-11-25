@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -64,16 +65,12 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                 NLogger.Logger.Debug("Fetching message from repository. MessageID: {0}", messageId);
                 var message = RepositoryBuilder.MessagesRepository.GetMessage(messageId);
 
-                NLogger.Logger.Debug("Fetching user role from repository. UserID: {0}", principal.UserId);
-                var chatInfo = RepositoryBuilder.ChatsRepository.GetChatSpecificInfo(principal.UserId, message.ChatId);
-                var userRole = chatInfo?.Role ?? RepositoryBuilder.ChatsRepository.GetUserRole(UserRoles.Regular);
-                NLogger.Logger.Debug("Fetched user role: {0}", userRole);
-                if ((userRole.RolePermissions & RolePermissions.ReadPerm) == 0)
+                NLogger.Logger.Debug("Checking if the user is in chat. UserID: {0}", principal.UserId);
+                if (RepositoryBuilder.ChatsRepository.GetChatUsers(message.ChatId).All(x => x.Id != principal.UserId))
                 {
-                    NLogger.Logger.Error("User {0} does not have read permissions. Forbidden", principal.UserId);
-                    Challenge(actionContext);
-                    return;
+                    NLogger.Logger.Error("User {0} is not in chat. Forbidden", principal.UserId);
                 }
+
                 NLogger.Logger.Debug("Authorization of user {0} is successful", principal.UserId);
                 base.OnAuthorization(actionContext);
             }

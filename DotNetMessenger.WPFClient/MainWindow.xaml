@@ -4,64 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DotNetMessenger.WPFClient"
-        xmlns:controls="clr-namespace:DotNetMessenger.WPFClient.Controls"
-        xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
         mc:Ignorable="d"
-        Title="Messenger" Height="350" Width="625" MinWidth="630" MinHeight="350"
-        DataContext="{Binding RelativeSource={RelativeSource Self}}">
-    <Window.Resources>
-        <CollectionViewSource x:Key="HistorySorted" Source="{Binding Path=HistoryMetaBoxs}" >
-            <CollectionViewSource.SortDescriptions>
-                <scm:SortDescription PropertyName="MetaDateTime"/>
-            </CollectionViewSource.SortDescriptions>
-        </CollectionViewSource>
-    </Window.Resources>
+        Title="MainWindow" Height="350" Width="525">
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*" MaxWidth="500"  MinWidth="200"/>
-            <ColumnDefinition Width="2" />
-            <ColumnDefinition Width="5*" MinWidth="350"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="2"/>
-            <RowDefinition Height="Auto" MaxHeight="{Binding ElementName=SendMessageBox, Path=MaxHeight}"/>
-        </Grid.RowDefinitions>
-        <Menu Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3">
-            <MenuItem Name="CreateGroupMenuItem" Header="_Создать группу" Click="CreateGroupMenuItem_OnClick"/>
-        </Menu>
-        <controls:UserMetaBox x:Name="CurrentUserBox" Grid.Column="0" Grid.Row="1"/>
-        <TabControl Grid.Column="0" Grid.Row="2" Grid.RowSpan="3">
-            <TabItem Header="Пользователи">
-                <ListView x:Name="UsersListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single" 
-                          SelectionChanged="UserPicker_SelectionChanged" />
-            </TabItem>
-            <TabItem Header="Группы">
-                <ListView x:Name="ChatsListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single"
-                          SelectionChanged="ChatPicker_SelectionChanged"/>
-            </TabItem>
-            <TabItem Header="История">
-                <ListView x:Name="HistoryListView" ItemContainerStyle="{StaticResource ListViewItemOptionStyle}" SelectionMode="Single"
-                          SelectionChanged="HistoryPicker_SelectionChanged"/>
-            </TabItem>
-        </TabControl>
-        <Border Background="GhostWhite" BorderBrush="Gainsboro" BorderThickness="1"
-                Grid.Row="1" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
-            <controls:MetaBox x:Name="CurrentChatBox" />
-        </Border>
-        <GridSplitter Grid.RowSpan="4"  Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" />
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Grid.Row="2" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
-            <ItemsControl x:Name="MessagesListView" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Vertical" IsItemsHost="True"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
-        </ScrollViewer>
-        <GridSplitter Grid.Row="3" Grid.Column="2" HorizontalAlignment="Stretch" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
-        <controls:SendMessageBox x:Name="SendMessageBox" Grid.Row="4" Grid.Column="2" Visibility="{Binding Path=DisplayChatRegion, Mode=OneWay}"/>
+        
     </Grid>
 </Window>

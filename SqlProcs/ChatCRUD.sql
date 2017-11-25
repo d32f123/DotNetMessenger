@@ -24,6 +24,30 @@ DECLARE @chatId INT, @creatorId INT
 	RETURN
 GO
 
+DROP PROCEDURE IF EXISTS Find_New_Messages_InChats;
+DROP TYPE IF EXISTS ChatMessageType; 
+CREATE TYPE ChatMessageType AS TABLE (
+	[ChatID]	INT UNIQUE,
+	[MessageID]	INT
+	);
+GO
+
+CREATE OR ALTER PROCEDURE Find_New_Messages_InChats
+	@chatMessages	[ChatMessageType] READONLY
+AS
+	SELECT m.[ID], m.[ChatID], m.[SenderID], m.[MessageDate], m.[MessageText] FROM [Messages] m, @chatMessages cm
+	WHERE m.ChatID = cm.ChatID AND m.ID > cm.MessageID;
+	RETURN;
+GO
+
+CREATE OR ALTER PROCEDURE Check_For_ChatUser
+	@chatID		INT,
+	@userID		INT
+AS
+	SELECT 1 WHERE EXISTS(SELECT * FROM ChatUsers cu WHERE cu.[ChatID] = @chatID AND cu.[UserID] = @userID)
+	RETURN;
+GO
+
 CREATE OR ALTER PROCEDURE Get_Chat
 	@id			INT
 AS

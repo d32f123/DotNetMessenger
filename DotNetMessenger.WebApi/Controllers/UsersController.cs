@@ -6,7 +6,6 @@ using System.Web.Http;
 using DotNetMessenger.Model;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.Logger;
-using DotNetMessenger.WebApi.Events;
 using DotNetMessenger.WebApi.Extensions;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
@@ -35,12 +34,11 @@ namespace DotNetMessenger.WebApi.Controllers
             NLogger.Logger.Debug("Called with argument UID:{0}", id);
             var user = RepositoryBuilder.UsersRepository.GetUser(id);
             NLogger.Logger.Debug("Fetched user with id {0}", id);
-            if (!(Thread.CurrentPrincipal is UserPrincipal))
+            if (!(Thread.CurrentPrincipal is UserPrincipal principal))
             {
                 NLogger.Logger.Warn("Could not get user principal");
                 return user;
             }
-            var principal = (UserPrincipal) Thread.CurrentPrincipal;
 
             if (principal.UserId == id)
             {
@@ -61,7 +59,7 @@ namespace DotNetMessenger.WebApi.Controllers
         /// </summary>
         /// <param name="username">Username of the user</param>
         /// <returns>Information about the user</returns>
-        [Route("{username:length(6,50)}")]
+        [Route("{username:length(4,50)}")]
         [HttpGet]
         public User GetUserByUsername(string username)
         {
@@ -98,12 +96,19 @@ namespace DotNetMessenger.WebApi.Controllers
         public IEnumerable<User> GetAllUsers()
         {
             NLogger.Logger.Debug("Called");
+
+            if (!(Thread.CurrentPrincipal is UserPrincipal principal))
+            {
+                NLogger.Logger.Warn("Could not get user principal");
+                return null;
+            }
+
             using (var timeLogger = new ChronoLogger("{0}: Fetching all users", nameof(GetAllUsers)))
             {
                 timeLogger.Start();
                 var users = RepositoryBuilder.UsersRepository.GetAllUsers();
                 var usersList = users as List<User> ?? users.ToList();
-                usersList.ForEach(x =>
+                usersList.Where(x => x.Id != principal.UserId).ToList().ForEach(x =>
                 {
                     x.ChatUserInfos = null;
                     x.Chats = null;
@@ -271,38 +276,14 @@ namespace DotNetMessenger.WebApi.Controllers
         }
         [Route("subscribe/{lastUserId:int}")]
         [HttpGet]
-        public List<User> SubscribeForNewChats(int lastUserId)
+        public List<User> GetNewUsers(int lastUserId)
         {
-            User lastUser;
             NLogger.Logger.Debug("Called with arguments: {0}", lastUserId);
-            try
-            {
-                NLogger.Logger.Debug("Fetching current chat");
-                lastUser = lastUserId >= 0
-                    ? RepositoryBuilder.UsersRepository.GetUser(lastUserId)
-                    : null;
-            }
-            catch
-            {
-                NLogger.Logger.Debug("Invalid ID provided. Will subscribe to any new chat");
-                lastUser = null;
-            }
 
             // check for already existing new chats
-            if (lastUser != null)
-            {
-                var users = RepositoryBuilder.UsersRepository.GetAllUsers().ToList();
-                if (users.Any(x => x.Id > lastUserId))
-                    return users.Where(x => x.Id > lastUserId).ToList();
-            }
-            NLogger.Logger.Debug("Creating a poller to subscribe for new users");
-            var poller = new SinglePoller(new NewUserSubscription(), -1);
-            while (!poller.SubscriptionInvoked)
-                Thread.Sleep(500);
-            NLogger.Logger.Debug("New user registered. Returning user to subscriber");
-            return lastUser == null
-                ? RepositoryBuilder.UsersRepository.GetAllUsers().ToList()
-                : RepositoryBuilder.UsersRepository.GetAllUsers().Where(x => x.Id > lastUserId).ToList();
+            NLogger.Logger.Debug("Returning new users");
+            var users = RepositoryBuilder.UsersRepository.GetAllUsers().ToList();
+            return users.Any(x => x.Id > lastUserId) ? users.Where(x => x.Id > lastUserId).ToList() : null;
         }
     }
 }

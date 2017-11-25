@@ -87,6 +87,36 @@ namespace DotNetMessenger.DataLayer
         /// <remarks>Call with both dates == null is equivalent to <see cref="GetChatMessages"/> call</remarks>
         IEnumerable<Message> GetChatMessagesInRange(int chatId, DateTime? dateFrom, DateTime? dateTo);
         /// <summary>
+        /// See <see cref="GetChatMessagesFrom(int,System.DateTime)"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="messageId">The starting point</param>
+        /// <returns>List of messages in the chat with id greater than <paramref name="messageId"/></returns>
+        IEnumerable<Message> GetChatMessagesFrom(int chatId, int messageId);
+        /// <summary>
+        /// See <see cref="GetChatMessagesTo(int,System.DateTime)"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="messageId">The end point</param>
+        /// <returns>List of messages in the chat with id less than <paramref name="messageId"/></returns>
+        IEnumerable<Message> GetChatMessagesTo(int chatId, int messageId);
+        /// <summary>
+        /// See <see cref="GetChatMessagesFrom(int,System.DateTime)"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="idFrom">The starting point</param>
+        /// <param name="idTo">The end point</param>
+        /// <returns>List of messages in the chat with id in [<paramref name="idFrom"/>;<paramref name="idTo"/></returns>
+        IEnumerable<Message> GetChatMessagesInRange(int chatId, int idFrom, int idTo);
+        /// <summary>
+        /// For given last message for a given chat returns a list of new messages for that chat
+        /// Takes multiple chats: (chat, message)
+        /// </summary>
+        /// <param name="chatMessages">A list of different chats to check</param>
+        /// <returns>A list of pair (chat, messages)</returns>
+        IEnumerable<Message> GetChatsMessagesFrom(
+            IEnumerable<Message> chatMessages); 
+            /// <summary>
         /// Searches for a given string in a chat (regexp: ^*<paramref name="searchString"/>*$)
         /// </summary>
         /// <param name="chatId">The id of the chat</param>

@@ -99,8 +99,8 @@ CREATE OR ALTER PROCEDURE Get_Chat_Messages_InRange
 AS
 	IF NOT EXISTS (SELECT * FROM [Chats] WHERE [ID] = @chatId)
 		THROW 50000, 'id is invalid', 1
-	SELECT a.[Username], a.[Text], a.[Date], a.[ChatID], b.[ChatTitle], c.[ExpireDate] 
-	FROM(SELECT m.[ID], u.[Username] Username, m.[MessageText] [Text], m.[MessageDate] [Date], m.[ChatID] ChatID
+	SELECT a.[ID], a.[Username], a.[MessageText], a.[Date], a.[ChatID], b.[ChatTitle], c.[ExpireDate] 
+	FROM(SELECT m.[ID], u.[Username] Username, m.[MessageText], m.[MessageDate] [Date], m.[ChatID] ChatID
 			FROM [Messages] m, [Users] u 
 			WHERE m.[ChatID] = @chatId 
 				AND m.[MessageDate] >= @rangeStart 
@@ -110,12 +110,24 @@ AS
 	LEFT JOIN (SELECT mdq.[MessageID], mdq.[ExpireDate] FROM [MessagesDeleteQueue] mdq) c ON c.[MessageID] = a.[ID];
 GO
 
+CREATE OR ALTER PROCEDURE Get_Chat_Messages_InRange
+	@chatId		INT,
+	@rangeStart	INT,
+	@rangeEnd	INT
+AS
+	IF NOT EXISTS (SELECT * FROM [Chats] WHERE [ID] = @chatId)
+		THROW 50000, 'id is invalid', 1
+	SELECT m.[ID], m.[SenderID], m.[ChatID], m.[MessageText], m.[MessageDate] FROM [Messages] m 
+	WHERE m.[ChatID] = @chatId AND m.[ID] BETWEEN @rangeStart AND @rangeEnd;
+	RETURN;
+GO
+
 CREATE OR ALTER PROCEDURE Get_Chat_Messages
 	@chatId		INT
 AS
 	IF NOT EXISTS (SELECT * FROM [Chats] WHERE [ID] = @chatId)
 		THROW 50000, 'id is invalid', 1
-	SELECT a.[Username], a.[Text], a.[Date], a.[ChatID], b.[ChatTitle], c.[ExpireDate] 
+	SELECT a.[ID], a.[Username], a.[Text], a.[Date], a.[ChatID], b.[ChatTitle], c.[ExpireDate] 
 	FROM(SELECT m.[ID], u.[Username] Username, m.[MessageText] [Text], m.[MessageDate] [Date], m.[ChatID] ChatID
 			FROM [Messages] m, [Users] u 
 			WHERE m.[ChatID] = @chatId 

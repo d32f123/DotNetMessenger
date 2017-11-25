@@ -106,7 +106,13 @@ namespace DotNetMessenger.DataLayer
         /// </summary>
         /// <param name="chatId">The chat id</param>
         void DeleteChatInfo(int chatId);
-
+        /// <summary>
+        /// Checks if a selected user is in chat
+        /// </summary>
+        /// <param name="userId">User to check</param>
+        /// <param name="chatId">Chat to check</param>
+        /// <returns></returns>
+        bool CheckForChatUser(int userId, int chatId);
         // Chat-specific user info
         /// <summary>
         /// Gets information for a given <paramref name="userId"/> specific to a given <paramref name="chatId"/>

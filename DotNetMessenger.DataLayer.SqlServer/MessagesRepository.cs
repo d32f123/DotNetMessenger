@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using System.Transactions;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
 using DotNetMessenger.Logger;
@@ -249,7 +250,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows)
-                            throw new ArgumentException();
+                            return null;
                         reader.Read();
                         return new MessageSqlProxy
                         {
@@ -337,6 +338,127 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             };
                         }
                     }
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// See <see cref="M:DotNetMessenger.DataLayer.SqlServer.MessagesRepository.GetChatMessagesFrom(System.Int32,System.DateTime)" />
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="messageId">The starting point</param>
+        /// <returns>List of messages in the chat with id greater than <paramref name="messageId" /></returns>
+        public IEnumerable<Message> GetChatMessagesFrom(int chatId, int messageId)
+        {
+            return GetChatMessagesInRange(chatId, messageId, int.MaxValue);
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// See <see cref="M:DotNetMessenger.DataLayer.SqlServer.MessagesRepository.GetChatMessagesTo(System.Int32,System.DateTime)" />
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="messageId">The end point</param>
+        /// <returns>List of messages in the chat with id less than <paramref name="messageId" /></returns>
+        public IEnumerable<Message> GetChatMessagesTo(int chatId, int messageId)
+        {
+            return GetChatMessagesInRange(chatId, 0, messageId);
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// See <see cref="M:DotNetMessenger.DataLayer.SqlServer.MessagesRepository.GetChatMessagesFrom(System.Int32,System.DateTime)" />
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="idFrom">The starting point</param>
+        /// <param name="idTo">The end point</param>
+        /// <returns>List of messages in the chat with id in [<paramref name="idFrom" />;<paramref name="idTo" /></returns>
+        public IEnumerable<Message> GetChatMessagesInRange(int chatId, int idFrom, int idTo)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "Get_Chat_Messages_InRange";
+
+                    command.Parameters.AddWithValue("@rangeStart", idFrom);
+                    command.Parameters.AddWithValue("@rangeEnd", idTo);
+                    command.Parameters.AddWithValue("@chatId", chatId);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows) yield break;
+                        while (reader.Read())
+                        {
+                            yield return new MessageSqlProxy
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                ChatId = chatId,
+                                Text = reader.IsDBNull(reader.GetOrdinal("MessageText")) ? null : reader.GetString(reader.GetOrdinal("MessageText")),
+                                SenderId = reader.GetInt32(reader.GetOrdinal("SenderID")),
+                                Date = reader.GetDateTime(reader.GetOrdinal("MessageDate")),
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        public class ChatMessagePair
+        {
+            public int ChatID { get; set; }
+            public int MessageID { get; set; }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// For given last message for a given chat returns a list of new messages for that chat
+        /// Takes multiple chats: (chat, message)
+        /// </summary>
+        /// <param name="chatMessages">A list of different chats to check</param>
+        /// <returns>A list of pair (chat, messages)</returns>
+        public IEnumerable<Message> GetChatsMessagesFrom(
+            IEnumerable<Message> chatMessages)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "Find_New_Messages_InChats";
+
+                    var parameter =
+                        command.Parameters.AddWithValue("@chatMessages", chatMessages.Select(x => new ChatMessagePair {ChatID = x.ChatId, MessageID = x.Id}).ToDataTable());
+                    parameter.SqlDbType = SqlDbType.Structured;
+                    parameter.TypeName = "ChatMessageType";
+
+                    SqlDataReader reader = null;
+                    try
+                    {
+                        reader = command.ExecuteReader();
+                    }
+                    catch (Exception e)
+                    {
+                        NLogger.Logger.Error(e);
+                    }
+                    {
+                        if (!reader.HasRows) yield break;
+                        while (reader.Read())
+                        {
+                            yield return new MessageSqlProxy
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                ChatId = reader.GetInt32(reader.GetOrdinal("ChatID")),
+                                Text = reader.IsDBNull(reader.GetOrdinal("MessageText"))
+                                    ? null
+                                    : reader.GetString(reader.GetOrdinal("MessageText")),
+                                SenderId = reader.GetInt32(reader.GetOrdinal("SenderID")),
+                                Date = reader.GetDateTime(reader.GetOrdinal("MessageDate")),
+                            };
+                        }
+                    }
+                    reader.Dispose();
+
                 }
             }
         }

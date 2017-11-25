@@ -373,6 +373,32 @@ namespace DotNetMessenger.DataLayer.SqlServer
         }
         /// <inheritdoc />
         /// <summary>
+        /// Checks if a selected user is in chat
+        /// </summary>
+        /// <param name="userId">User to check</param>
+        /// <param name="chatId">Chat to check</param>
+        /// <returns></returns>
+        public bool CheckForChatUser(int userId, int chatId)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "Check_For_ChatUser";
+
+                    command.Parameters.AddWithValue("@userID", userId);
+                    command.Parameters.AddWithValue("@chatID", chatId);
+
+                    var ret = (int?)command.ExecuteScalar();
+                    return ret != null;
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
         /// Gets the list of chats the user is in
         /// </summary>
         /// <param name="userId">The id of the user</param>

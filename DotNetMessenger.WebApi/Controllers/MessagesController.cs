@@ -8,8 +8,6 @@ using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
-using DotNetMessenger.Model.Enums;
-using DotNetMessenger.WebApi.Events;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Filters.Logging;
@@ -72,8 +70,6 @@ namespace DotNetMessenger.WebApi.Controllers
                         message.Attachments?.Where(x => x != null));
                     NLogger.Logger.Info("Successfully stored message from UID:{0} to CID:{1}. Message: {2}",
                         userId, chatId, msg);
-                    NLogger.Logger.Debug("Notifying subscribers about a new message");
-                    new ChatMessageSubscriptions().InvokeFor(this, chatId);
                     return msg;
                 }
             }
@@ -85,8 +81,6 @@ namespace DotNetMessenger.WebApi.Controllers
                 var msg = RepositoryBuilder.MessagesRepository.StoreTemporaryMessage(userId, chatId, message.Text,
                     ((DateTime) message.ExpirationDate).ToLocalTime(), message.Attachments?.Where(x => x != null));
                 NLogger.Logger.Info("Successfully stored message with e.d from UID: {0} to CID:{1}. Message: {2}", userId, chatId, msg);
-                NLogger.Logger.Debug("Notifying subscribers about a new message");
-                new ChatMessageSubscriptions().InvokeFor(this, chatId);
                 return msg;
             }
         }
@@ -204,6 +198,11 @@ namespace DotNetMessenger.WebApi.Controllers
         public IEnumerable<Message> GetChatMessagesInRange(int chatId, [FromBody] DateRange dateRange)
         {
             NLogger.Logger.Debug("Called with arguments CID:{0}, Range:{1}", chatId, dateRange);
+            if (dateRange == null)
+            {
+                NLogger.Logger.Debug("Called with null argument. Returning null");
+                return null;
+            }
 
             using (var timeLogger = new ChronoLogger("Fetching chat messages for chat {0} in range: {1}",
                 chatId, dateRange))
@@ -216,6 +215,30 @@ namespace DotNetMessenger.WebApi.Controllers
                 NLogger.Logger.Info("Successfully fetched messages of chat {0} in range {1}. Found {2} messages",
                     chatId, dateRange, chatMessagesInRange.Length);
                 return chatMessagesInRange;
+            }
+        }
+        /// <summary>
+        /// Gets chat messages starting from id <paramref name="messageId"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="messageId">The id of the first message to be included</param>
+        /// <returns>A list of messages</returns>
+        [Route("chats/{chatId:int}/from/{messageId:int}")]
+        [HttpGet]
+        [ChatUserAuthorization(RegexString = @".*\/chats\/([^\/]+)\/?", Permissions = RolePermissions.ReadPerm)]
+        public IEnumerable<Message> GetChatMessagesFromId(int chatId, int messageId)
+        {
+            NLogger.Logger.Debug("Called with arguments: CID:{0}, MID:{1}", chatId, messageId);
+
+            using (var timeLogger = new ChronoLogger("Fetching chat messages for chat {0} in range: {1}",
+                chatId, messageId))
+            {
+                timeLogger.Start();
+                var messages = RepositoryBuilder.MessagesRepository.GetChatMessagesFrom(chatId, messageId)
+                    .Where(x => x.Id != messageId).ToArray();
+                NLogger.Logger.Info("Successfully fetched messages of chat {0} in range {1}. Found {2} messages",
+                    chatId, messageId, messages.Length);
+                return messages;
             }
         }
         /// <summary>

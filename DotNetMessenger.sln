@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.16
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{51DB56CD-9ED3-4CEC-A2A1-ACE94EC12667}"
 	ProjectSection(SolutionItems) = preProject
@@ -28,7 +28,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WebApi", "D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.Logger", "DotNetMessenger.Logger\DotNetMessenger.Logger.csproj", "{834AC2CB-B64D-418F-AF9B-5486AE936F45}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WPFClient", "DotNetMessenger.WPFClient\DotNetMessenger.WPFClient.csproj", "{66D8FC28-06C2-45A3-A519-777804AB7B4C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetMessenger.WPFClient", "DotNetMessenger.WPFClient\DotNetMessenger.WPFClient.csproj", "{AEEC10E2-3DD2-4CE5-9D57-0DF7EDD23F43}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -60,12 +60,15 @@ Global
 		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{834AC2CB-B64D-418F-AF9B-5486AE936F45}.Release|Any CPU.Build.0 = Release|Any CPU
-		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{66D8FC28-06C2-45A3-A519-777804AB7B4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEEC10E2-3DD2-4CE5-9D57-0DF7EDD23F43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEEC10E2-3DD2-4CE5-9D57-0DF7EDD23F43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEEC10E2-3DD2-4CE5-9D57-0DF7EDD23F43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEEC10E2-3DD2-4CE5-9D57-0DF7EDD23F43}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FB706DB8-D5EC-44AA-8E8C-F0B25C1BDD77}
 	EndGlobalSection
 EndGlobal

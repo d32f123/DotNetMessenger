@@ -9,7 +9,6 @@ using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
-using DotNetMessenger.WebApi.Events;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Filters.Logging;
@@ -104,10 +103,6 @@ namespace DotNetMessenger.WebApi.Controllers
                         timeLog.Start();
                         chat = RepositoryBuilder.ChatsRepository.CreateGroupChat(members, chatCredentials.Title);
                         NLogger.Logger.Info("Group chat created. Id: {0}, Members: {1}", chat.Id, members);
-                        NLogger.Logger.Debug("Notifying users that a new chat was created");
-                        var chatSubscription = new ChatSubscription();
-                        foreach (var member in members)
-                            chatSubscription.InvokeFor(this, member);
                         return chat;
                     }
                 }
@@ -489,44 +484,34 @@ namespace DotNetMessenger.WebApi.Controllers
             }
         }
         /// <summary>
-        /// Creates a subscription for new messages
+        /// Checks for new messages in selected chats. New messages are considered to have ID higher than the provided
         /// </summary>
-        /// <param name="chatId">The id of the chat to be subscribed to</param>
-        /// <param name="messageId">Latest message that the client has</param>
+        /// <param name="chatMessagePairs">A list of pairs (chat, lastMessage)</param>
         /// <returns>List of new messages for the client</returns>
-        [Route("{chatId:int}/subscribe/{messageId:int}")]
-        [HttpGet]
-        [ChatUserAuthorization(RegexString = RegexString)]
-        public List<Message> SubscribeForNewMessages(int chatId, int messageId)
+        [Route("messages/subscribe")]
+        [HttpPut]
+        public List<Message> GetNewMessages([FromBody] IEnumerable<Message> chatMessagePairs)
         {
-            Message currMsg;
-            NLogger.Logger.Debug("Called with arguments: {0}, {1}", chatId, messageId);
-            try
+            NLogger.Logger.Debug("Called");
+            /* TODO: CHECK FOR RIGHTS */
+            if (!(Thread.CurrentPrincipal is UserPrincipal principal))
             {
-                NLogger.Logger.Debug("Fetching current message");
-                currMsg = messageId >= 0
-                    ? RepositoryBuilder.MessagesRepository.GetMessage(messageId)
-                    : RepositoryBuilder.MessagesRepository.GetLastChatMessage(chatId);
+                NLogger.Logger.Warn("Could not get user principal");
+                return null;
             }
-            catch
+
+            var currChat = -1;
+            var msgs = chatMessagePairs as List<Message> ?? chatMessagePairs.ToList();
+            var userId = principal.UserId;
+            foreach (var msg in msgs)
             {
-                NLogger.Logger.Debug("Invalid ID provided. Will subscribe to any new message");
-                currMsg = null;
+                if (msg.ChatId == currChat) continue;
+                // check for perms
+                currChat = msg.ChatId;
+                if (!RepositoryBuilder.ChatsRepository.CheckForChatUser(userId, currChat))
+                    throw new ArgumentException();
             }
-            if (currMsg != null && RepositoryBuilder.MessagesRepository.GetLastChatMessage(chatId).Date
-                    .CompareTo(currMsg.Date) > 0)
-            {
-                NLogger.Logger.Debug("Subscriber does not have latest messages. Fetching new messages and returning");
-                return RepositoryBuilder.MessagesRepository.GetChatMessagesFrom(chatId, currMsg.Date).Where(x => x.Id != currMsg.Id).ToList();
-            }
-            NLogger.Logger.Debug("Creating a poller to subscribe to new messages for chatid: {0}", chatId);
-            var poller = new SinglePoller(new ChatMessageSubscriptions(), chatId);
-            while (!poller.SubscriptionInvoked)
-                Thread.Sleep(500);
-            NLogger.Logger.Debug("New message received for chatId: {0}. Returning the message to subscirber", chatId);
-            return currMsg == null
-                ? RepositoryBuilder.MessagesRepository.GetChatMessages(chatId).ToList()
-                : RepositoryBuilder.MessagesRepository.GetChatMessagesFrom(chatId, currMsg.Date).Where(x => x.Id != currMsg.Id).ToList();
+            return RepositoryBuilder.MessagesRepository.GetChatsMessagesFrom(msgs).ToList();
         }
         /// <summary>
         /// Creates a subscription for new chats
@@ -535,22 +520,10 @@ namespace DotNetMessenger.WebApi.Controllers
         /// <returns>A list of new chats for the client</returns>
         [Route("subscribe/{chatId:int}")]
         [HttpGet]
-        public List<Chat> SubscribeForNewChats(int chatId)
+        public List<Chat> GetNewChats(int chatId)
         {
-            Chat lastChat;
             NLogger.Logger.Debug("Called with arguments: {0}", chatId);
-            try
-            {
-                NLogger.Logger.Debug("Fetching current chat");
-                lastChat = chatId >= 0
-                    ? RepositoryBuilder.ChatsRepository.GetChat(chatId)
-                    : null;
-            }
-            catch
-            {
-                NLogger.Logger.Debug("Invalid ID provided. Will subscribe to any new chat");
-                lastChat = null;
-            }
+            NLogger.Logger.Debug("Fetching current chat");
 
             if (!(Thread.CurrentPrincipal is UserPrincipal principal))
             {
@@ -560,23 +533,9 @@ namespace DotNetMessenger.WebApi.Controllers
 
             var userId = principal.UserId;
 
-            // check for already existing new chats
-            if (lastChat != null)
-            {
-                var chats = RepositoryBuilder.ChatsRepository.GetUserChats(userId).ToList();
-                if (chats.Any(x => x.ChatType == ChatTypes.GroupChat && x.Id > chatId))
-                    return chats.Where(x => x.Id > chatId && x.ChatType == ChatTypes.GroupChat).ToList();
-            }
-            NLogger.Logger.Debug("Creating a poller to subscribe to new chats for userId: {0}", userId);
-            var poller = new SinglePoller(new ChatSubscription(), userId);
-            while (!poller.SubscriptionInvoked)
-                Thread.Sleep(500);
-            NLogger.Logger.Debug("New chat received for userId: {0}. Returning chats to subscriber", userId);
-            return lastChat == null
-                ? RepositoryBuilder.ChatsRepository.GetUserChats(userId).Where(x => x.ChatType == ChatTypes.GroupChat)
-                    .ToList()
-                : RepositoryBuilder.ChatsRepository.GetUserChats(userId)
-                    .Where(x => x.Id > chatId && x.ChatType == ChatTypes.GroupChat).ToList();
+            NLogger.Logger.Debug("Returning latest chats");
+            return RepositoryBuilder.ChatsRepository.GetUserChats(userId)
+                .Where(x => x.Id > chatId && x.ChatType == ChatTypes.GroupChat).ToList();
         }
     }
 }
