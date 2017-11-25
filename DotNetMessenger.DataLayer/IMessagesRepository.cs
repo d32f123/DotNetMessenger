@@ -53,7 +53,9 @@ namespace DotNetMessenger.DataLayer
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
         /// <returns>Empty list if invalid id, else list of all messages in that chat</returns>
-        /// <seealso cref="GetChatMessagesInRange"/>
+        /// <seealso>
+        ///     <cref>GetChatMessagesInRange</cref>
+        /// </seealso>
         IEnumerable<Message> GetChatMessages(int chatId);
         /// <summary>
         /// Gets last message of the chat
@@ -61,21 +63,27 @@ namespace DotNetMessenger.DataLayer
         /// <param name="chatId">The id of the chat</param>
         /// <returns>The last message in the chat</returns>
         Message GetLastChatMessage(int chatId);
+
         /// <summary>
         /// Get all messages in a chat starting from <paramref name="dateFrom"/>
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
         /// <param name="dateFrom">The starting point</param>
         /// <returns>Empty list if invalid chatid, else messages sent after <paramref name="dateFrom"/></returns>
-        /// <seealso cref="GetChatMessagesInRange"/>
+        /// <seealso>
+        ///     <cref>GetChatMessagesInRange</cref>
+        /// </seealso>
         IEnumerable<Message> GetChatMessagesFrom(int chatId, DateTime dateFrom);
+
         /// <summary>
         /// Get all messages in a chat before <paramref name="dateTo"/>
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
         /// <param name="dateTo">The end point</param>
         /// <returns>Empty list if invalid chatid, else list of messages prior to <paramref name="dateTo"/></returns>
-        /// <seealso cref="GetChatMessagesInRange"/>
+        /// <seealso>
+        ///     <cref>GetChatMessagesInRange</cref>
+        /// </seealso>
         IEnumerable<Message> GetChatMessagesTo(int chatId, DateTime dateTo);
         /// <summary>
         /// Get messages for a specific chat in a specific time range

@@ -7,8 +7,6 @@ using System.Web.Http.Controllers;
 using System.Web.Http.Filters;
 using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.Logger;
-using DotNetMessenger.Model;
-using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WebApi.Principals;
 
 namespace DotNetMessenger.WebApi.Filters.Authorization

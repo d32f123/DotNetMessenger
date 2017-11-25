@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Transactions;
 using DotNetMessenger.DataLayer.SqlServer.ModelProxies;
@@ -404,6 +405,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
             }
         }
 
+        [SuppressMessage("ReSharper", "InconsistentNaming")]
         public class ChatMessagePair
         {
             public int ChatID { get; set; }
@@ -432,15 +434,8 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     parameter.SqlDbType = SqlDbType.Structured;
                     parameter.TypeName = "ChatMessageType";
 
-                    SqlDataReader reader = null;
-                    try
-                    {
-                        reader = command.ExecuteReader();
-                    }
-                    catch (Exception e)
-                    {
-                        NLogger.Logger.Error(e);
-                    }
+
+                    using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows) yield break;
                         while (reader.Read())
@@ -457,8 +452,6 @@ namespace DotNetMessenger.DataLayer.SqlServer
                             };
                         }
                     }
-                    reader.Dispose();
-
                 }
             }
         }

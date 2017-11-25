@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 

@@ -70,7 +70,8 @@ namespace DotNetMessenger.Model
 
         public override int GetHashCode()
         {
-            return base.GetHashCode();
+            // ReSharper disable once NonReadonlyMemberInGetHashCode
+            return Id.GetHashCode();
         }
     }
 }
