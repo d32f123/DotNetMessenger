@@ -22,7 +22,7 @@ EXECUTE Get_User_Info 2;
 EXECUTE Delete_User_Info 1;
 EXECUTE Get_User_Info 1;
 
-EXECUTE Get_Chat_Messages 0;
+EXECUTE Get_Chat_Messages 1;
 
 EXECUTE CreateOrGet_Dialog 4, 2;
 

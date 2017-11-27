@@ -96,7 +96,7 @@ namespace DotNetMessenger.WebApi.Controllers
         {
             NLogger.Logger.Debug("Called with argument: {0}", chatId);
             var message = RepositoryBuilder.MessagesRepository.GetLastChatMessage(chatId);
-            NLogger.Logger.Info("Successfully fetched message with id: {0}", message.Id);
+            NLogger.Logger.Info("Successfully fetched message with id: {0}", message?.Id);
             return message;
         }
         /// <summary>

@@ -1,7 +1,11 @@
-﻿namespace DotNetMessenger.Model.Enums
+﻿using System.ComponentModel;
+
+namespace DotNetMessenger.Model.Enums
 {
     public enum Genders
     {
-        Female = 'F', Male = 'M', Unknown = 'U'
+        Female = 'F',
+        Male = 'M',
+        Unknown = 'U'
     }
 }
