@@ -26,7 +26,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             var request = context.Request;
             var authorization = request.Headers.Authorization;
 
-            NLogger.Logger.Debug("Authentication started");
+            //NLogger.Logger.Debug("Authentication started");
 
 
             if (authorization == null)
@@ -48,9 +48,9 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
                 return;
             }
 
-            NLogger.Logger.Debug("Converting token from Base64");
+            //NLogger.Logger.Debug("Converting token from Base64");
             var tokenStr = authorization.Parameter.FromBase64ToString();
-            NLogger.Logger.Debug("Token converted from Base64");
+            //NLogger.Logger.Debug("Token converted from Base64");
             if (string.IsNullOrEmpty(tokenStr))
             {
                 NLogger.Logger.Error("Credentials empty. Forbidden");
@@ -65,16 +65,16 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
             try
             {
-                NLogger.Logger.Debug("Parsing token");
+                //NLogger.Logger.Debug("Parsing token");
                 var token = Guid.Parse(tokenStr);
 
-                NLogger.Logger.Debug("Token parsed. Getting user id");
+                //NLogger.Logger.Debug("Token parsed. Getting user id");
                 var userId = await RepositoryBuilder.TokensRepository.GetUserIdByTokenAsync(token);
 
-                NLogger.Logger.Debug("Id is {0}. Getting username", userId);
+                //NLogger.Logger.Debug("Id is {0}. Getting username", userId);
                 var userName = RepositoryBuilder.UsersRepository.GetUser(userId).Username;
 
-                NLogger.Logger.Debug("Authentication successful. Setting principal");
+                //NLogger.Logger.Debug("Authentication successful. Setting principal");
                 HttpContext.Current.User = new UserPrincipal(userId, userName, token);
                 context.Principal = new UserPrincipal(userId, userName, token);
                 Thread.CurrentPrincipal = new UserPrincipal(userId, userName, token);
@@ -88,9 +88,9 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
         public Task ChallengeAsync(HttpAuthenticationChallengeContext context, CancellationToken cancellationToken)
         {
-            NLogger.Logger.Debug("Adding challenge to response");
+            //NLogger.Logger.Debug("Adding challenge to response");
             Challenge(context);
-            NLogger.Logger.Debug("Added challenge to response");
+            //NLogger.Logger.Debug("Added challenge to response");
             return Task.FromResult(0);
         }
 

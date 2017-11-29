@@ -17,7 +17,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
     {
         protected override async Task<IPrincipal> Authenticate(string userName, string password, CancellationToken cancellationToken)
         {
-            NLogger.Logger.Debug("Authenticating user by login and pass. Login: \"{0}\"", userName);
+            //NLogger.Logger.Debug("Authenticating user by login and pass. Login: \"{0}\"", userName);
             // check for username and password
             try
             {

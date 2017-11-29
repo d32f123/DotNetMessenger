@@ -4,7 +4,7 @@ DELETE FROM [Chats];
 -- create a few users
 EXECUTE Create_User 'd32f123', 'x';
 EXECUTE Create_User 'mopkoffka', 'x';
-EXECUTE Create_User 'admin1', 'x';
+EXECUTE Create_User 'admin123', 'x';
 
 -- list the newly created users
 EXECUTE Get_All_Users;
@@ -48,7 +48,7 @@ EXECUTE CreateOrGet_Dialog 1, 2;
 -- get the newly created chats
 EXECUTE Get_All_Chats;
 -- get users of a chat
-EXECUTE Get_Chat_Users 0;
+EXECUTE Get_Chat_Users 3;
 -- get users of a dialog
 EXECUTE Get_Chat_Users 1;
 EXECUTE Get_Chat_Users 2;

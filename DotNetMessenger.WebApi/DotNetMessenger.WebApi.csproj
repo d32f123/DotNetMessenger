@@ -101,6 +101,7 @@
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\ChatsController.cs" />
+    <Compile Include="Controllers\EventsController.cs" />
     <Compile Include="Controllers\MessagesController.cs" />
     <Compile Include="Controllers\TokensController.cs" />
     <Compile Include="Controllers\UsersController.cs" />
@@ -121,6 +122,7 @@
     </Compile>
     <Compile Include="Handlers\LoggingHandler.cs" />
     <Compile Include="Models\ChatCredentials.cs" />
+    <Compile Include="Models\ServerClientInteractions.cs" />
     <Compile Include="Models\DateRange.cs" />
     <Compile Include="Models\UserCredentials.cs" />
     <Compile Include="Principals\UserPrincipal.cs" />

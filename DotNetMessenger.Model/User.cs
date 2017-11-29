@@ -68,10 +68,18 @@ namespace DotNetMessenger.Model
             return true;
         }
 
+        protected bool Equals(User other)
+        {
+            return Id == other.Id && string.Equals(Username, other.Username) && Equals(UserInfo, other.UserInfo) &&
+                   Equals(Chats, other.Chats) && Equals(ChatUserInfos, other.ChatUserInfos);
+        }
+
         public override int GetHashCode()
         {
-            // ReSharper disable once NonReadonlyMemberInGetHashCode
-            return Id.GetHashCode();
+                var hashCode = Id;
+                hashCode = (hashCode * 397) ^ (Username != null ? Username.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (UserInfo != null ? UserInfo.GetHashCode() : 0);
+                return hashCode;
         }
     }
 }

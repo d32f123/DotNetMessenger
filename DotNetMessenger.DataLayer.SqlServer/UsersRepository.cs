@@ -262,11 +262,81 @@ namespace DotNetMessenger.DataLayer.SqlServer
         }
         /// <inheritdoc />
         /// <summary>
+        /// Gets users which ids are in range
+        /// </summary>
+        /// <param name="start">Start of the range</param>
+        /// <param name="end">End of the range</param>
+        /// <returns>List of users in range</returns>
+        public IEnumerable<User> GetUsersInRange(int start, int end)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "Get_Users_InRange";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    command.Parameters.AddWithValue("@startId", start);
+                    command.Parameters.AddWithValue("@endId", end);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            yield break;
+                        while (reader.Read())
+                            yield return new UserSqlProxy()
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                Username = reader.GetString(reader.GetOrdinal("Username"))
+                            };
+                    }
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
+        /// Gets users specified in userIds param
+        /// </summary>
+        /// <param name="userIds">List of ids</param>
+        /// <returns>List of users</returns>
+        public IEnumerable<User> GetUsersInList(IEnumerable<int> userIds)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "Get_Users_By_Id";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    var parameter =
+                        command.Parameters.AddWithValue("@idlist", SqlHelper.IdListToDataTable(userIds));
+                    parameter.SqlDbType = SqlDbType.Structured;
+                    parameter.TypeName = "IDListType";
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            yield break;
+                        while (reader.Read())
+                        {
+                            yield return new UserSqlProxy()
+                            {
+                                Id = reader.GetInt32(reader.GetOrdinal("ID")),
+                                Username = reader.GetString(reader.GetOrdinal("Username"))
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        /// <inheritdoc />
+        /// <summary>
         /// Returns user's info given their id
         /// </summary>
         /// <param name="userId">The id of the user</param>
         /// <returns>UserInfo object representing the information, null if no user or info found</returns>
-        /// <exception cref="ArgumentException">Throws if no info found</exception>
         public UserInfo GetUserInfo(int userId)
         {
             using (var connection = new SqlConnection(_connectionString))
@@ -282,7 +352,7 @@ namespace DotNetMessenger.DataLayer.SqlServer
                     using (var reader = command.ExecuteReader())
                     {
                         if (!reader.HasRows)
-                            throw new ArgumentException();
+                            return null;
                         reader.Read();
                         return new UserInfo
                         {

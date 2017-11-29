@@ -27,7 +27,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
         {
             try
             {
-                NLogger.Logger.Debug("Authorization successful if the user making the request is the same as in the URI");
+                //NLogger.Logger.Debug("Authorization successful if the user making the request is the same as in the URI");
                 if (string.IsNullOrEmpty(RegexString))
                 {
                     NLogger.Logger.Fatal("RegexString to get id is not set. Cannot authorize");
@@ -36,7 +36,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                 }
 
                 // extract string matching regex
-                NLogger.Logger.Debug("Parsing user id using regex {0}", RegexString);
+                //NLogger.Logger.Debug("Parsing user id using regex {0}", RegexString);
                 var r = new Regex(RegexString);
                 var m = r.Match(actionContext.Request.RequestUri.AbsolutePath);
                 // if there is any content
@@ -47,7 +47,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     return;
                 }
                 // parse it to user id
-                NLogger.Logger.Debug("Parsing string id to int");
+                //NLogger.Logger.Debug("Parsing string id to int");
                 var userId = int.Parse(m.Groups[1].Value);
 
                 // get principal
@@ -65,7 +65,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     Challenge(actionContext);
                     return;
                 }
-                NLogger.Logger.Debug("Authorization of user {0} is successful", principal.UserId);
+                //NLogger.Logger.Debug("Authorization of user {0} is successful", principal.UserId);
                 base.OnAuthorization(actionContext);
             }
             catch (Exception e)
@@ -77,7 +77,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
 
         private void Challenge(HttpActionContext actionContext)
         {
-            NLogger.Logger.Debug("Adding challenge");
+            //NLogger.Logger.Debug("Adding challenge");
             actionContext.Response = actionContext.Request.CreateResponse(HttpStatusCode.Unauthorized);
             actionContext.Response.Headers.Add("WWW-Authenticate", $"Basic realm=\"{Realm}\"");
         }

@@ -969,5 +969,95 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 }
             }
         }
+        /// <summary>
+        /// Gets ids and roles of the users of the chat, that are not listed in <paramref name="usersList"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="usersList">The ids that should not be included in the output</param>
+        /// <returns>A list of pairs of id and chatuserinfo of users that are not listed in <paramref name="usersList"/></returns>
+        public IEnumerable<int> GetNotListedChatMembers(int chatId, IEnumerable<int> usersList)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "Get_Not_Listed_Chat_Members";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    var parameter =
+                        command.Parameters.AddWithValue("@idlist", SqlHelper.IdListToDataTable(usersList));
+                    parameter.SqlDbType = SqlDbType.Structured;
+                    parameter.TypeName = "IdListType";
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            yield break;
+                        while (reader.Read())
+                        {
+                            yield return
+                                reader.GetInt32(reader.GetOrdinal("UserID"));
+                        }
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<KeyValuePair<int, ChatUserInfo>> GetChatMembersInfo(int chatId)
+        {
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = "Get_Chat_Members_With_ChatUserInfo";
+                    command.CommandType = CommandType.StoredProcedure;
+
+                    command.Parameters.AddWithValue("@chatId", chatId);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                            yield break;
+                        while (reader.Read())
+                        {
+                            yield return new KeyValuePair<int, ChatUserInfo>(
+                                reader.GetInt32(reader.GetOrdinal("UserID")), new ChatUserInfo
+                                {
+                                    Nickname = reader.IsDBNull(reader.GetOrdinal("Nickname"))
+                                        ? null
+                                        : reader.GetString(reader.GetOrdinal("Nickname")),
+                                    Role = new UserRole
+                                    {
+                                        RoleName = reader.GetString(reader.GetOrdinal("RoleName")),
+                                        RolePermissions =
+                                            (reader.GetBoolean(reader.GetOrdinal("WritePerm"))
+                                                ? RolePermissions.WritePerm
+                                                : RolePermissions.NaN) |
+                                            (reader.GetBoolean(reader.GetOrdinal("ReadPerm"))
+                                                ? RolePermissions.ReadPerm
+                                                : RolePermissions.NaN) |
+                                            (reader.GetBoolean(reader.GetOrdinal("ChatInfoPerm"))
+                                                ? RolePermissions.ChatInfoPerm
+                                                : RolePermissions.NaN) |
+                                            (reader.GetBoolean(reader.GetOrdinal("AttachPerm"))
+                                                ? RolePermissions.AttachPerm
+                                                : RolePermissions.NaN) |
+                                            (reader.GetBoolean(reader.GetOrdinal("ManageUsersPerm"))
+                                                ? RolePermissions.ManageUsersPerm
+                                                : RolePermissions.NaN),
+                                        RoleType = (UserRoles)reader.GetInt32(reader.GetOrdinal("RoleID"))
+                                    }
+                                }
+                            );
+                        }
+                    }
+                }
+            }
+        }
     }
 }

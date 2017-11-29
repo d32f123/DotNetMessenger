@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Model;
 
@@ -42,7 +43,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
                 {
                     _userInfo = RepositoryBuilder.UsersRepository.GetUserInfo(Id);
                 }
-                catch
+                catch (ArgumentException e)
                 {
                     _userInfo = null;
                 }

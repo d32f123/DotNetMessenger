@@ -32,7 +32,7 @@ GO
 
 CREATE OR ALTER PROCEDURE Get_All_Users
 AS
-	SELECT * FROM [Users] WHERE [ID] <> 0;
+	SELECT [ID], [Username], [Password], [RegisterDate], [LastSeenDate] FROM [Users] WHERE [ID] <> 0;
 	RETURN;
 GO
 
@@ -63,7 +63,7 @@ CREATE OR ALTER PROCEDURE Set_User_Info
 	@dateofbirth DATE NULL,
 	@gender		CHAR(1) NULL
 AS
-	IF ((SELECT COUNT(*) FROM [UserInfos] WHERE [UserID] = @id) = 0)
+	IF (NOT EXISTS(SELECT * FROM [UserInfos] WHERE [UserID] = @id))
 	BEGIN
 		INSERT INTO [UserInfos] ([UserID], [LastName], [FirstName], [Phone], [Email], [DateOfBirth], [Gender])
 		VALUES (@id, @lastname, @firstname, @phone, @email, @dateofbirth, @gender);
@@ -77,7 +77,7 @@ GO
 CREATE OR ALTER PROCEDURE Get_User_Info
 	@id			INT
 AS
-	IF ((SELECT COUNT(*) FROM [Users] WHERE [ID] = @id) = 0)
+	IF (NOT EXISTS(SELECT * FROM [Users] WHERE [ID] = @id))
 		THROW 50000, 'id is invalid', 1
 	SELECT * FROM [UserInfos] WHERE [UserID] = @id;
 	RETURN;
@@ -86,7 +86,7 @@ GO
 CREATE OR ALTER PROCEDURE Delete_User_Info
 	@id			INT
 AS
-	IF ((SELECT COUNT(*) FROM [Users] WHERE [ID] = @id) = 0)
+	IF (NOT EXISTS(SELECT * FROM [Users] WHERE [ID] = @id))
 		THROW 50000, 'id is invalid', 1
 	DELETE FROM [UserInfos] WHERE [UserID] = @id;
 	IF (@@ROWCOUNT = 0)
@@ -98,7 +98,7 @@ CREATE OR ALTER PROCEDURE Set_User_Avatar
 	@id			INT,
 	@avatar		VARBINARY(MAX)
 AS
-	IF ((SELECT COUNT(*) FROM [UserInfos] WHERE [UserID] = @id) = 0)
+	IF (NOT EXISTS(SELECT * FROM [UserInfos] WHERE [UserID] = @id))
 	BEGIN
 		INSERT INTO [UserInfos] ([UserID], [Avatar])
 		VALUES (@id, @avatar);
@@ -108,8 +108,25 @@ AS
 		WHERE [UserID] = @id;
 GO
 
+CREATE OR ALTER PROCEDURE Get_Users_InRange
+	@startId	INT,
+	@endId		INT
+AS
+	SELECT [ID], [Username], [Password], [RegisterDate], [LastSeenDate] FROM [Users] 
+	WHERE [ID] <> 0 AND [ID] BETWEEN @startId AND @endId;
+	RETURN;
+GO
+
+CREATE OR ALTER PROCEDURE Get_Users_By_Id
+	@idlist		IDListType READONLY
+AS
+	SELECT [ID], [Username], [Password], [RegisterDate], [LastSeenDate] FROM [Users]
+	WHERE [ID] IN (SELECT list.[ID] FROM @idlist list);
+	RETURN;
+GO
+
 EXECUTE Get_All_Users;
-EXECUTE Create_User 'admin1', 'x';
+EXECUTE Create_User 'adminasdf', 'x';
 EXECUTE Delete_User 2;
 EXECUTE Get_User 2;
 EXECUTE Get_User_By_Username 'd32f1234';

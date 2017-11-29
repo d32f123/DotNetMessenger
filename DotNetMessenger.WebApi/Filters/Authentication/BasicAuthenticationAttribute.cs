@@ -27,11 +27,11 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             var request = context.Request;
             var authorization = request.Headers.Authorization;
 
-            NLogger.Logger.Debug("Authentication starting");
+            //NLogger.Logger.Debug("Authentication starting");
 
             if (authorization == null)
             {
-                NLogger.Logger.Warn("No authorization header included in the request. Skipping");
+                //NLogger.Logger.Warn("No authorization header included in the request. Skipping");
                 return;
             }
 
@@ -69,7 +69,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
             }
             else
             {
-                NLogger.Logger.Debug("Successfully authenticated user. Username: \"{0}\"", principal.Identity.Name);
+                //NLogger.Logger.Debug("Successfully authenticated user. Username: \"{0}\"", principal.Identity.Name);
                 HttpContext.Current.User = principal;
                 context.Principal = principal;
                 Thread.CurrentPrincipal = principal;
@@ -81,9 +81,9 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
         public Task ChallengeAsync(HttpAuthenticationChallengeContext context, CancellationToken cancellationToken)
         {
-            NLogger.Logger.Debug("Adding challenge to response");
+            //NLogger.Logger.Debug("Adding challenge to response");
             Challenge(context);
-            NLogger.Logger.Debug("Added challenge to response");
+            //NLogger.Logger.Debug("Added challenge to response");
             return Task.FromResult(0);
         }
 
@@ -108,14 +108,14 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
         private static Tuple<string, string> ExtractUserNameAndPassword(string authorizationParameter)
         {
             var decodedCredentials = authorizationParameter.FromBase64ToString();
-            NLogger.Logger.Debug("Credentials decoded from base64");
+            //NLogger.Logger.Debug("Credentials decoded from base64");
             if (string.IsNullOrEmpty(decodedCredentials))
             {
-                NLogger.Logger.Debug("Credentials are empty");
+                //NLogger.Logger.Debug("Credentials are empty");
                 return null;
             }
 
-            NLogger.Logger.Debug("Splitting username from password");
+            //NLogger.Logger.Debug("Splitting username from password");
             var colonIndex = decodedCredentials.IndexOf(':');
 
             if (colonIndex == -1)
@@ -126,7 +126,7 @@ namespace DotNetMessenger.WebApi.Filters.Authentication
 
             var userName = decodedCredentials.Substring(0, colonIndex);
             var password = decodedCredentials.Substring(colonIndex + 1);
-            NLogger.Logger.Debug("Successfully extracted username and password");
+            //NLogger.Logger.Debug("Successfully extracted username and password");
             return new Tuple<string, string>(userName, password);
         }
     }

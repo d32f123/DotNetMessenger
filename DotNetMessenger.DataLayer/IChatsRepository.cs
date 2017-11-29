@@ -148,5 +148,14 @@ namespace DotNetMessenger.DataLayer
         /// <param name="userId">The id of the user</param>
         /// <param name="chatId">The id of the chat</param>
         void ClearChatSpecificInfo(int userId, int chatId);
+        /// <summary>
+        /// Gets ids and roles of the users of the chat, that are not listed in <paramref name="usersList"/>
+        /// </summary>
+        /// <param name="chatId">The id of the chat</param>
+        /// <param name="usersList">The ids that should not be included in the output</param>
+        /// <returns>A list of pairs of id and chatuserinfo of users that are not listed in <paramref name="usersList"/></returns>
+        IEnumerable<int> GetNotListedChatMembers(int chatId, IEnumerable<int> usersList);
+
+        IEnumerable<KeyValuePair<int, ChatUserInfo>> GetChatMembersInfo(int chatId);
     }
 }

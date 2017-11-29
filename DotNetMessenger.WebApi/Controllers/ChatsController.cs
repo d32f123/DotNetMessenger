@@ -493,7 +493,6 @@ namespace DotNetMessenger.WebApi.Controllers
         public List<Message> GetNewMessages([FromBody] IEnumerable<Message> chatMessagePairs)
         {
             NLogger.Logger.Debug("Called");
-            /* TODO: CHECK FOR RIGHTS */
             if (!(Thread.CurrentPrincipal is UserPrincipal principal))
             {
                 NLogger.Logger.Warn("Could not get user principal");
@@ -523,7 +522,7 @@ namespace DotNetMessenger.WebApi.Controllers
         public List<Chat> GetNewChats(int chatId)
         {
             NLogger.Logger.Debug("Called with arguments: {0}", chatId);
-            NLogger.Logger.Debug("Fetching current chat");
+            NLogger.Logger.Debug("Fetching current user");
 
             if (!(Thread.CurrentPrincipal is UserPrincipal principal))
             {

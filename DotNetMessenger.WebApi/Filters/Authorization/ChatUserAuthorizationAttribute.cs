@@ -33,7 +33,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
         {
             try
             {
-                NLogger.Logger.Debug("Authorizing user if user is in chat and has permission: {0}", Permissions);
+                //NLogger.Logger.Debug("Authorizing user if user is in chat and has permission: {0}", Permissions);
                 if (string.IsNullOrEmpty(RegexString))
                 {
                     NLogger.Logger.Fatal("RegexString to get chat id is not set. Cannot authorize");
@@ -42,7 +42,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                 }
 
                 // extract string matching regex
-                NLogger.Logger.Debug("Parsing chat id using regex {0}", RegexString);
+                //NLogger.Logger.Debug("Parsing chat id using regex {0}", RegexString);
                 var r = new Regex(RegexString);
                 var m = r.Match(actionContext.Request.RequestUri.AbsolutePath);
                 // if there is any content
@@ -53,7 +53,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     return;
                 }
                 // parse it to chat id
-                NLogger.Logger.Debug("Parsing string chatId to int");
+                //NLogger.Logger.Debug("Parsing string chatId to int");
                 var chatId = int.Parse(m.Groups[1].Value);
 
                 // get principal
@@ -65,7 +65,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                 }
 
                 // check if principal user id is the same as the id extracted from uri
-                NLogger.Logger.Debug("Getting user role");
+                //NLogger.Logger.Debug("Getting user role");
                 ChatUserInfo chatInfo;
                 try
                 {
@@ -76,7 +76,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     chatInfo = null;
                 }
                 var userRole = chatInfo?.Role ?? RepositoryBuilder.ChatsRepository.GetUserRole(UserRoles.Regular);
-                NLogger.Logger.Debug("Fetched role: {0}", userRole);
+                //NLogger.Logger.Debug("Fetched role: {0}", userRole);
                 
                 // check for permissions
                 if (Enum.GetValues(typeof(RolePermissions)).Cast<RolePermissions>().Any(perm => (perm & Permissions) != 0 && (userRole.RolePermissions & perm) == 0))
@@ -85,7 +85,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     Challenge(actionContext);
                     return;
                 }
-                NLogger.Logger.Debug("Authorization of userID {0} is successful", principal.UserId);
+                //NLogger.Logger.Debug("Authorization of userID {0} is successful", principal.UserId);
                 base.OnAuthorization(actionContext);
             }
             catch (Exception e)
@@ -97,7 +97,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
 
         protected void Challenge(HttpActionContext actionContext)
         {
-            NLogger.Logger.Debug("Adding challenge");
+            //NLogger.Logger.Debug("Adding challenge");
             actionContext.Response = actionContext.Request.CreateResponse(HttpStatusCode.Unauthorized);
             actionContext.Response.Headers.Add("WWW-Authenticate", $"Basic realm=\"{Realm}\"");
         }

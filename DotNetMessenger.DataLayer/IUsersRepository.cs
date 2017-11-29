@@ -75,5 +75,18 @@ namespace DotNetMessenger.DataLayer
         /// </summary>
         /// <returns>A collection of all the users in DB</returns>
         IEnumerable<User> GetAllUsers();
+        /// <summary>
+        /// Gets users which ids are in range
+        /// </summary>
+        /// <param name="start">Start of the range</param>
+        /// <param name="end">End of the range</param>
+        /// <returns>List of users in range</returns>
+        IEnumerable<User> GetUsersInRange(int start, int end);
+        /// <summary>
+        /// Gets users specified in userIds param
+        /// </summary>
+        /// <param name="userIds">List of ids</param>
+        /// <returns>List of users</returns>
+        IEnumerable<User> GetUsersInList(IEnumerable<int> userIds);
     }
 }

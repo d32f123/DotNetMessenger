@@ -28,7 +28,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
         {
             try
             {
-                NLogger.Logger.Debug("Authorization successful if the user is the creator of the chat");
+                //NLogger.Logger.Debug("Authorization successful if the user is the creator of the chat");
                 if (string.IsNullOrEmpty(RegexString))
                 {
                     NLogger.Logger.Fatal("RegexString to get chat id is not set. Cannot authorize");
@@ -37,7 +37,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                 }
 
                 // extract string matching regex
-                NLogger.Logger.Debug("Parsing chat id using regex {0}", RegexString);
+                //NLogger.Logger.Debug("Parsing chat id using regex {0}", RegexString);
                 var r = new Regex(RegexString);
                 var m = r.Match(actionContext.Request.RequestUri.AbsolutePath);
                 // if there is any content
@@ -48,7 +48,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     return;
                 }
                 // parse it to chat id
-                NLogger.Logger.Debug("Parsing string id to int");
+                //NLogger.Logger.Debug("Parsing string id to int");
                 var chatId = int.Parse(m.Groups[1].Value);
 
                 // get principal
@@ -66,7 +66,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     Challenge(actionContext);
                     return;
                 }
-                NLogger.Logger.Debug("Authorization complete");
+                //NLogger.Logger.Debug("Authorization complete");
                 base.OnAuthorization(actionContext);
             }
             catch (Exception e)

@@ -28,7 +28,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
         {
             try
             {
-                NLogger.Logger.Debug("Authorization successful if username from URI is the user making the request");
+                //NLogger.Logger.Debug("Authorization successful if username from URI is the user making the request");
                 if (string.IsNullOrEmpty(RegexString))
                 {
                     NLogger.Logger.Fatal("RegexString to get username is not set. Cannot authorize");
@@ -37,7 +37,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                 }
 
                 // extract string matching regex
-                NLogger.Logger.Debug("Parsing username using regex {0}", RegexString);
+                //NLogger.Logger.Debug("Parsing username using regex {0}", RegexString);
                 var r = new Regex(RegexString);
                 var m = r.Match(actionContext.Request.RequestUri.AbsolutePath);
                 // if there is any content
@@ -65,7 +65,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
                     Challenge(actionContext);
                     return;
                 }
-                NLogger.Logger.Debug("Authorization complete");
+                //NLogger.Logger.Debug("Authorization complete");
                 base.OnAuthorization(actionContext);
             }
             catch (Exception e)
@@ -77,7 +77,7 @@ namespace DotNetMessenger.WebApi.Filters.Authorization
 
         private void Challenge(HttpActionContext actionContext)
         {
-            NLogger.Logger.Debug("Adding challenge");
+            //NLogger.Logger.Debug("Adding challenge");
             actionContext.Response = actionContext.Request.CreateResponse(HttpStatusCode.Unauthorized);
             actionContext.Response.Headers.Add("WWW-Authenticate", $"Basic realm=\"{Realm}\"");
         }

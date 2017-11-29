@@ -281,14 +281,50 @@ AS
 		THROW 50000, 'id is invalid', 1;
 GO
 
+CREATE OR ALTER PROCEDURE Get_Chat_Members_With_ChatUserInfo
+	@chatId		INT
+AS
+	SELECT ids.[UserID], infos.[RoleID], infos.[Nickname], infos.[RoleName], infos.[ReadPerm], 
+	infos.[WritePerm], infos.[ChatInfoPerm], infos.[AttachPerm], infos.[ManageUsersPerm] 
+	FROM 
+	(	SELECT cu.[UserID] FROM [ChatUsers] cu
+		WHERE cu.[ChatID] = @chatId) ids
+	INNER JOIN (
+		SELECT cui.[UserID], cui.[UserRole] RoleID, cui.[Nickname], ur.[Name] RoleName, ur.[ReadPerm], ur.[WritePerm], ur.[ChatInfoPerm], 
+			ur.[AttachPerm], ur.[ManageUsersPerm] 
+		FROM [ChatUserInfos] cui, [UserRoles] ur
+		WHERE cui.ChatID = @chatId AND ur.ID = cui.UserRole) infos
+	ON ids.[UserID] = infos.[UserID]
+	RETURN;
+GO
+
+CREATE OR ALTER PROCEDURE Get_Not_Listed_Chat_Members
+	@chatId		INT,
+	@idlist		IDListType READONLY
+AS
+	SELECT cu.[UserID] FROM [ChatUsers] cu
+	WHERE cu.[ChatID] = @chatId AND cu.[UserID] NOT IN (SELECT [ID] FROM @idlist)
+	RETURN;
+GO
+
+EXECUTE Get_Chat_Members_With_ChatUserInfo 3;
+EXECUTE Get_Chat_Messages 3;
+
 DECLARE @idlist IDListType;
 INSERT @idlist ([ID]) VALUES (17), (19), (20);
 EXECUTE Create_Chat @idlist, 'nice', 1;
 EXECUTE CreateOrGet_Dialog 2, 2;
-EXECUTE Get_Chat 1;
+EXECUTE Get_Chat 2;
 EXECUTE Get_All_Chats;
 EXECUTE Delete_Chat 7;
-EXECUTE Add_User 1, 1;
+EXECUTE Add_User 3, 5;
+
+EXECUTE Create_User 'admin1', 'x';
+EXECUTE Create_User 'admin2', 'x';
+
+EXECUTE Add_User 3, 3;
+
+EXECUTE Get_Chat_Users 3;
 
 DECLARE @idlist1 IDListType;
 INSERT @idlist1 ([ID]) VALUES (1), (3);
