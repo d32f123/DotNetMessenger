@@ -47,6 +47,7 @@
     <Compile Include="Enums\AttachmentTypes.cs" />
     <Compile Include="Enums\ChatTypes.cs" />
     <Compile Include="Enums\Genders.cs" />
+    <Compile Include="Enums\RolePermissions.cs" />
     <Compile Include="Enums\UserRoles.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="User.cs" />

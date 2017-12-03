@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-
-namespace DotNetMessenger.Model.Enums
+﻿namespace DotNetMessenger.Model.Enums
 {
     public enum Genders
     {

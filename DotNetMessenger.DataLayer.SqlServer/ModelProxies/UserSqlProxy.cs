@@ -43,7 +43,7 @@ namespace DotNetMessenger.DataLayer.SqlServer.ModelProxies
                 {
                     _userInfo = RepositoryBuilder.UsersRepository.GetUserInfo(Id);
                 }
-                catch (ArgumentException e)
+                catch (ArgumentException)
                 {
                     _userInfo = null;
                 }

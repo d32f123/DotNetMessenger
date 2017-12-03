@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Threading;
 using System.Web.Http;
 using DotNetMessenger.DataLayer.SqlServer;
-using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
 using DotNetMessenger.Model.Enums;
@@ -59,21 +55,28 @@ namespace DotNetMessenger.WebApi.Controllers
                 output.UsersWithNewInfo.Any() ? output.UsersWithNewInfo.Count() : 0);
 
             // get all the new chats that the client is not aware of
-            output.NewChats = RepositoryBuilder.ChatsRepository.GetUserChats(userId)
-                .Where(x => x.Id > clientState.LastChatId && x.ChatType == ChatTypes.GroupChat).ToList();
+            var allChats = RepositoryBuilder.ChatsRepository.GetUserChats(userId).ToList();
+            output.NewChats = allChats.Where(x =>
+                    !clientState.ChatsStates.Select(y => y.ChatId).Contains(x.Id) && x.ChatType == ChatTypes.GroupChat)
+                .ToList();
+            output.LostChats = clientState.ChatsStates.Select(x => x.ChatId).Except(allChats.Select(x => x.Id))
+                .ToList();
+
             NLogger.Logger.Debug("Fetched new chats, total: {0}", output.NewChats.Count());
+            NLogger.Logger.Debug("Fetched lost chats: {0}", output.LostChats.Count());
             
 
             // get a list of messages that the client does not have
             var newMessages = RepositoryBuilder.MessagesRepository.GetChatsMessagesFrom(
-                clientState.ChatsStates.Select(x => new Message {Id = x.LastChatMessageId, ChatId = x.ChatId}));
+                    clientState.ChatsStates.Select(x => new Message {Id = x.LastChatMessageId, ChatId = x.ChatId}))
+                .ToList();
 #if DEBUG
-            NLogger.Logger.Debug("Fetched new messages, total: {0}", newMessages.Count());
+            NLogger.Logger.Debug("Fetched new messages, total: {0}", newMessages.Count);
 #endif
             var newMessagesDictionary = GetDictionaryFromMessageList(newMessages);
 
             output.NewChatInfo = new List<ChatInfoOutput>();
-            foreach (var chatState in clientState.ChatsStates)
+            foreach (var chatState in clientState.ChatsStates.Where(x => !output.LostChats.Contains(x.ChatId)))
             {
                 var shouldCommit = false;
                 var returnState = new ChatInfoOutput();
@@ -81,7 +84,7 @@ namespace DotNetMessenger.WebApi.Controllers
                 returnState.ChatId = chatState.ChatId;
 
                 // if client's chatInfo hash is not the same as ours, give them the new chatInfo
-                var isDialog = false;
+                bool isDialog;
                 var chat = RepositoryBuilder.ChatsRepository.GetChat(chatState.ChatId);
 
                 isDialog = chat.ChatType == ChatTypes.Dialog;
@@ -112,10 +115,12 @@ namespace DotNetMessenger.WebApi.Controllers
                 // if client does not have some of the members, return them as well
                 if (!isDialog)
                 {
-                    var newMembers =
-                        RepositoryBuilder.ChatsRepository.GetNotListedChatMembers(chatState.ChatId,
-                            chatState.CurrentMembers.Select(x => x.UserId)).ToList();
-                    if (newMembers.Any())
+                    List<int> newMembers = null;
+                    if (!chat.Users.SequenceEqual(chatState.CurrentMembers.Select(x => x.UserId)))
+                    {
+                        newMembers = chat.Users as List<int> ?? chat.Users.ToList();
+                    }
+                    if (newMembers != null && newMembers.Any())
                     {
                         shouldCommit = true;
                         returnState.NewMembers = newMembers;

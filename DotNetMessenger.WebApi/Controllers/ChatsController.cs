@@ -300,8 +300,8 @@ namespace DotNetMessenger.WebApi.Controllers
         /// </summary>
         /// <param name="chatId">The id of the chat</param>
         /// <param name="userIds">List of users to be kicked</param>
-        [Route("{chatId:int}/users")]
-        [HttpDelete]
+        [Route("{chatId:int}/users/delete")]
+        [HttpPost]
         [ChatUserAuthorization(RegexString = RegexString, Permissions = RolePermissions.ManageUsersPerm)]
         public void KickUsers(int chatId, [FromBody] IEnumerable<int> userIds)
         {

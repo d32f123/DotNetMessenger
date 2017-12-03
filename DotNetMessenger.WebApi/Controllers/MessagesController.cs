@@ -8,6 +8,7 @@ using DotNetMessenger.DataLayer.SqlServer;
 using DotNetMessenger.DataLayer.SqlServer.Exceptions;
 using DotNetMessenger.Logger;
 using DotNetMessenger.Model;
+using DotNetMessenger.Model.Enums;
 using DotNetMessenger.WebApi.Filters.Authentication;
 using DotNetMessenger.WebApi.Filters.Authorization;
 using DotNetMessenger.WebApi.Filters.Logging;

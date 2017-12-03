@@ -25,7 +25,7 @@ namespace DotNetMessenger.Model
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((UserRole) obj);
         }
 
@@ -39,15 +39,5 @@ namespace DotNetMessenger.Model
                 return hashCode;
             }
         }
-    }
-    [Flags]
-    public enum RolePermissions
-    {
-        NaN = 0,
-        ReadPerm = 1,
-        WritePerm = 2,
-        ChatInfoPerm = 4,
-        AttachPerm = 8,
-        ManageUsersPerm = 16
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using DotNetMessenger.Model;
 
 namespace DotNetMessenger.WebApi.Models
@@ -28,8 +27,6 @@ namespace DotNetMessenger.WebApi.Models
     {
         public int LastUserId { get; set; }
 
-        public int LastChatId { get; set; }
-
         public IEnumerable<UserInfoState> UsersStates { get; set; }
 
         public IEnumerable<ChatInfoState> ChatsStates { get; set; }
@@ -54,6 +51,8 @@ namespace DotNetMessenger.WebApi.Models
 
         public IEnumerable<Chat> NewChats { get; set; }
         
+        public IEnumerable<int> LostChats { get; set; }
+
         public IEnumerable<User> UsersWithNewInfo { get; set; }
 
         public IEnumerable<ChatInfoOutput> NewChatInfo { get; set; }

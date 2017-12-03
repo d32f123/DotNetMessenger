@@ -28,7 +28,7 @@ EXECUTE CreateOrGet_Dialog 4, 2;
 
 EXECUTE Get_All_Chats;
 
-EXECUTE Get_Chat 0;
+EXECUTE Get_Chat 3;
 
 -- create some chats
 DECLARE @idlist IDListType;

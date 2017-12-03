@@ -538,14 +538,21 @@ namespace DotNetMessenger.DataLayer.SqlServer
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandType = CommandType.StoredProcedure;
-                    command.CommandText = "KickUsersFromChat";
+                    command.CommandText = "Kick_Users";
 
-                    var parameter = command.Parameters.AddWithValue("@IDList", SqlHelper.IdListToDataTable(idList));
+                    var parameter = command.Parameters.AddWithValue("@userIds", SqlHelper.IdListToDataTable(idList));
                     parameter.SqlDbType = SqlDbType.Structured;
                     parameter.TypeName = "IdListType";
-                    command.Parameters.AddWithValue("@ChatID", chatId);
-                    if (command.ExecuteNonQuery() == 0)
-                        throw new ArgumentException();
+                    command.Parameters.AddWithValue("@chatId", chatId);
+                    try
+                    {
+                        if (command.ExecuteNonQuery() == 0)
+                            throw new ArgumentException();
+                    }
+                    catch (Exception e)
+                    {
+                        NLogger.Logger.Trace(e);
+                    }
                     NLogger.Logger.Trace("DB:Called stored procedure:{0}", "[KickUsersFromChat]");
                 }
             }
